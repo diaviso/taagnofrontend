@@ -153,16 +153,16 @@ export default function ProprietaireLayout({ children }: ProprietaireLayoutProps
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-0 z-50 h-full bg-background/95 backdrop-blur-xl border-r transition-all duration-300 ease-in-out",
+          "fixed left-0 top-0 z-40 h-full bg-background/95 backdrop-blur-xl border-r transition-all duration-300 ease-in-out",
           sidebarCollapsed ? "w-20" : "w-72",
-          mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          mobileMenuOpen ? "translate-x-0 z-50" : "-translate-x-full lg:translate-x-0"
         )}
       >
         <div className="flex flex-col h-full">
-          {/* Logo */}
+          {/* Logo - Hidden on desktop when collapsed to avoid duplication with top bar */}
           <div className={cn(
             "p-6 border-b transition-all duration-300",
-            sidebarCollapsed && "p-4"
+            sidebarCollapsed && "p-4 lg:hidden"
           )}>
             <Link href="/proprietaire" className="flex items-center gap-3">
               <div className="relative">
@@ -183,6 +183,10 @@ export default function ProprietaireLayout({ children }: ProprietaireLayoutProps
               )}
             </Link>
           </div>
+          {/* Spacer when sidebar is collapsed on desktop */}
+          {sidebarCollapsed && (
+            <div className="hidden lg:block h-4" />
+          )}
 
           {/* User Profile */}
           <div className={cn(
@@ -341,7 +345,7 @@ export default function ProprietaireLayout({ children }: ProprietaireLayoutProps
         )}
       >
         {/* Top Bar (desktop) */}
-        <div className="hidden lg:flex sticky top-0 z-30 h-16 items-center justify-between px-6 bg-background/80 backdrop-blur-xl border-b">
+        <div className="hidden lg:flex sticky top-0 z-50 h-16 items-center justify-between px-6 bg-background/80 backdrop-blur-xl border-b">
           <div>
             <h1 className="text-lg font-semibold">Espace Propriétaire</h1>
             <p className="text-sm text-muted-foreground">Gérez vos véhicules et services</p>
@@ -363,7 +367,7 @@ export default function ProprietaireLayout({ children }: ProprietaireLayoutProps
         </div>
 
         {/* Page Content */}
-        <div className="p-6">
+        <div className="p-6 pb-8">
           {children}
         </div>
       </main>

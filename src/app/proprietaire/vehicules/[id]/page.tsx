@@ -131,6 +131,17 @@ export default function VehicleDetailPage() {
     },
   });
 
+  const setMainPhotoMutation = useMutation({
+    mutationFn: (photoId: string) => vehiclesService.setMainPhoto(vehicleId, photoId),
+    onSuccess: () => {
+      toast.success("Photo principale mise à jour");
+      queryClient.invalidateQueries({ queryKey: ["vehicle", vehicleId] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || "Erreur lors de la modification");
+    },
+  });
+
   const handleDocumentUpload = async () => {
     if (!documentFile) return;
     setIsUploading(true);
@@ -508,34 +519,51 @@ export default function VehicleDetailPage() {
                           Principal
                         </Badge>
                       )}
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
+                      {/* Action buttons */}
+                      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {/* Set as main button */}
+                        {!photo.isMain && (
                           <Button
-                            variant="destructive"
+                            variant="secondary"
                             size="icon"
-                            className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="h-7 w-7 bg-amber-500 hover:bg-amber-600 text-white"
+                            onClick={() => setMainPhotoMutation.mutate(photo.id)}
+                            disabled={setMainPhotoMutation.isPending}
+                            title="Définir comme principale"
                           >
-                            <Trash2 className="h-3 w-3" />
+                            <Star className="h-3 w-3" />
                           </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Supprimer cette photo ?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Cette action est irréversible.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Annuler</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deletePhotoMutation.mutate(photo.id)}
-                              className="bg-red-500 hover:bg-red-600"
+                        )}
+                        {/* Delete button */}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              className="h-7 w-7"
                             >
-                              Supprimer
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Supprimer cette photo ?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Cette action est irréversible.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Annuler</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deletePhotoMutation.mutate(photo.id)}
+                                className="bg-red-500 hover:bg-red-600"
+                              >
+                                Supprimer
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
                   ))}
                 </div>
