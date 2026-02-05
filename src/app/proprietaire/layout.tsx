@@ -24,7 +24,11 @@ import {
   Bell,
   HelpCircle,
   TrendingUp,
+  ArrowLeftRight,
+  MapPin,
 } from "lucide-react";
+import { UserMode } from "@/types";
+import { toast } from "sonner";
 
 interface ProprietaireLayoutProps {
   children: React.ReactNode;
@@ -81,7 +85,21 @@ const bottomMenuItems = [
 export default function ProprietaireLayout({ children }: ProprietaireLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, isAuthenticated, isLoading: authLoading, isProprietaire, logout } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, isProprietaire, setUserMode, logout } = useAuth();
+  const [isSwitchingMode, setIsSwitchingMode] = useState(false);
+
+  const handleSwitchToVoyageur = async () => {
+    setIsSwitchingMode(true);
+    try {
+      await setUserMode(UserMode.VOYAGEUR);
+      toast.success("Mode changé en Voyageur");
+      router.push("/");
+    } catch (error) {
+      toast.error("Erreur lors du changement de mode");
+    } finally {
+      setIsSwitchingMode(false);
+    }
+  };
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -357,12 +375,15 @@ export default function ProprietaireLayout({ children }: ProprietaireLayoutProps
                 3
               </span>
             </Button>
-            <Link href="/">
-              <Button variant="outline" className="gap-2">
-                <ChevronLeft className="h-4 w-4" />
-                Retour au site
-              </Button>
-            </Link>
+<Button
+              variant="outline"
+              className="gap-2 border-green-500/50 text-green-600 hover:bg-green-50 hover:text-green-700"
+              onClick={handleSwitchToVoyageur}
+              disabled={isSwitchingMode}
+            >
+              <ArrowLeftRight className="h-4 w-4" />
+              {isSwitchingMode ? "Changement..." : "Passer en mode Voyageur"}
+            </Button>
           </div>
         </div>
 
