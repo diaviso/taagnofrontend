@@ -159,21 +159,17 @@ function LoginContent() {
 
     setIsSubmitting(true);
     try {
-      await authService.register({
+      const result = await authService.register({
         email: registerEmail,
         password: registerPassword,
         firstName: registerFirstName,
         lastName: registerLastName,
       });
       toast.success(
-        "Inscription réussie ! Vérifiez votre email pour activer votre compte."
+        result.message || "Un code de vérification a été envoyé à votre email."
       );
-      setActiveTab("login");
-      setRegisterFirstName("");
-      setRegisterLastName("");
-      setRegisterEmail("");
-      setRegisterPassword("");
-      setRegisterConfirmPassword("");
+      // Redirect to verify-email page with email
+      router.push(`/verify-email?email=${encodeURIComponent(registerEmail)}`);
     } catch (error: any) {
       const message =
         error.response?.data?.message || "Erreur lors de l'inscription";
