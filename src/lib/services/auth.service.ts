@@ -10,4 +10,24 @@ export const authService = {
   getGoogleLoginUrl(): string {
     return process.env.NEXT_PUBLIC_GOOGLE_LOGIN_URL || 'http://localhost:3008/api/auth/google';
   },
+
+  async register(data: { email: string; password: string; firstName: string; lastName: string }) {
+    const response = await api.post('/auth/register', data);
+    return response.data;
+  },
+
+  async login(data: { email: string; password: string }) {
+    const response = await api.post('/auth/login', data);
+    return response.data;
+  },
+
+  async forgotPassword(email: string) {
+    const response = await api.post('/auth/forgot-password', { email });
+    return response.data;
+  },
+
+  async resetPassword(data: { token: string; password: string }) {
+    const response = await api.post('/auth/reset-password', data);
+    return response.data;
+  },
 };
