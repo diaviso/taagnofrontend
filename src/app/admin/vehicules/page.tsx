@@ -38,8 +38,6 @@ import {
   Key,
   AlertTriangle,
   Loader2,
-  Filter,
-  ArrowUpRight,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -63,6 +61,35 @@ const getDocStatusBadge = (status: string) => {
   }
 };
 
+type StatusAction = 'APPROVED' | 'REJECTED' | 'PENDING';
+
+const statusActionConfig: Record<StatusAction, { title: string; description: string; buttonLabel: string; buttonClass: string; requireComment: boolean; successMessage: string }> = {
+  APPROVED: {
+    title: "Approuver le véhicule",
+    description: "Le véhicule sera visible sur la plateforme.",
+    buttonLabel: "Approuver",
+    buttonClass: "bg-green-500 hover:bg-green-600",
+    requireComment: false,
+    successMessage: "Véhicule approuvé avec succès !",
+  },
+  REJECTED: {
+    title: "Refuser le véhicule",
+    description: "Le véhicule ne sera pas visible sur la plateforme.",
+    buttonLabel: "Refuser",
+    buttonClass: "bg-red-500 hover:bg-red-600",
+    requireComment: true,
+    successMessage: "Véhicule refusé.",
+  },
+  PENDING: {
+    title: "Remettre en attente",
+    description: "Le véhicule sera remis en attente de validation.",
+    buttonLabel: "Remettre en attente",
+    buttonClass: "bg-amber-500 hover:bg-amber-600",
+    requireComment: false,
+    successMessage: "Véhicule remis en attente.",
+  },
+};
+
 export default function AdminVehiclesPage() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -71,9 +98,10 @@ export default function AdminVehiclesPage() {
   const [statusFilter, setStatusFilter] = useState<VehicleStatus>(initialStatus);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [actionDialogOpen, setActionDialogOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
-  const [rejectComment, setRejectComment] = useState("");
+  const [targetStatus, setTargetStatus] = useState<StatusAction | null>(null);
+  const [actionComment, setActionComment] = useState("");
 
   const [vehicleDetailOpen, setVehicleDetailOpen] = useState(false);
   const [vehicleDetail, setVehicleDetail] = useState<Vehicle | null>(null);
@@ -85,31 +113,18 @@ export default function AdminVehiclesPage() {
     queryFn: () => adminService.getVehicles(statusFilter),
   });
 
-  const approveMutation = useMutation({
-    mutationFn: (id: string) => adminService.approveVehicle(id),
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status, comment }: { id: string; status: string; comment?: string }) =>
+      adminService.updateVehicleStatus(id, status, comment),
     onSuccess: () => {
-      toast.success("Véhicule approuvé avec succès !");
+      const config = targetStatus ? statusActionConfig[targetStatus] : null;
+      toast.success(config?.successMessage || "Statut mis à jour");
       queryClient.invalidateQueries({ queryKey: ["admin"] });
+      closeActionDialog();
       setVehicleDetailOpen(false);
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Erreur lors de l'approbation");
-    },
-  });
-
-  const rejectMutation = useMutation({
-    mutationFn: ({ id, comment }: { id: string; comment: string }) =>
-      adminService.rejectVehicle(id, comment),
-    onSuccess: () => {
-      toast.success("Véhicule refusé");
-      queryClient.invalidateQueries({ queryKey: ["admin"] });
-      setRejectDialogOpen(false);
-      setVehicleDetailOpen(false);
-      setRejectComment("");
-      setSelectedVehicle(null);
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Erreur lors du refus");
+      toast.error(error.response?.data?.message || "Erreur lors du changement de statut");
     },
   });
 
@@ -120,22 +135,36 @@ export default function AdminVehiclesPage() {
       const data = await adminService.getVehicleById(id);
       setVehicleDetail(data);
       setVehicleDetailOpen(true);
-    } catch (error) {
+    } catch {
       toast.error("Erreur lors du chargement du véhicule");
     } finally {
       setLoadingVehicleDetail(false);
     }
   };
 
-  const handleReject = (vehicle: Vehicle) => {
+  const openActionDialog = (vehicle: Vehicle, status: StatusAction) => {
     setSelectedVehicle(vehicle);
-    setRejectDialogOpen(true);
+    setTargetStatus(status);
+    setActionComment("");
+    setActionDialogOpen(true);
   };
 
-  const confirmReject = () => {
-    if (selectedVehicle && rejectComment.trim()) {
-      rejectMutation.mutate({ id: selectedVehicle.id, comment: rejectComment });
-    }
+  const closeActionDialog = () => {
+    setActionDialogOpen(false);
+    setSelectedVehicle(null);
+    setTargetStatus(null);
+    setActionComment("");
+  };
+
+  const confirmAction = () => {
+    if (!selectedVehicle || !targetStatus) return;
+    const config = statusActionConfig[targetStatus];
+    if (config.requireComment && !actionComment.trim()) return;
+    statusMutation.mutate({
+      id: selectedVehicle.id,
+      status: targetStatus,
+      comment: actionComment.trim() || undefined,
+    });
   };
 
   const getInitials = (firstName?: string | null, lastName?: string | null) => {
@@ -379,9 +408,9 @@ export default function AdminVehiclesPage() {
                           </div>
 
                           {/* Reject Reason */}
-                          {vehicle.status === VehicleStatus.REJECTED && vehicle.adminComment && (
-                            <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                              <p className="text-sm text-red-600 flex items-center gap-2">
+                          {vehicle.adminComment && (
+                            <div className={`mt-3 p-3 rounded-lg border ${vehicle.status === VehicleStatus.REJECTED ? 'bg-red-500/10 border-red-500/20' : 'bg-muted/50 border-border'}`}>
+                              <p className={`text-sm flex items-center gap-2 ${vehicle.status === VehicleStatus.REJECTED ? 'text-red-600' : 'text-muted-foreground'}`}>
                                 <AlertTriangle className="h-4 w-4" />
                                 <strong>Motif:</strong> {vehicle.adminComment}
                               </p>
@@ -402,8 +431,7 @@ export default function AdminVehiclesPage() {
                           {vehicle.status === VehicleStatus.PENDING && (
                             <>
                               <Button
-                                onClick={() => approveMutation.mutate(vehicle.id)}
-                                disabled={approveMutation.isPending}
+                                onClick={() => openActionDialog(vehicle, 'APPROVED')}
                                 className="gap-2 bg-green-500 hover:bg-green-600"
                               >
                                 <Check className="h-4 w-4" />
@@ -411,13 +439,31 @@ export default function AdminVehiclesPage() {
                               </Button>
                               <Button
                                 variant="destructive"
-                                onClick={() => handleReject(vehicle)}
+                                onClick={() => openActionDialog(vehicle, 'REJECTED')}
                                 className="gap-2"
                               >
                                 <X className="h-4 w-4" />
                                 Refuser
                               </Button>
                             </>
+                          )}
+                          {vehicle.status === VehicleStatus.APPROVED && (
+                            <Button
+                              onClick={() => openActionDialog(vehicle, 'PENDING')}
+                              className="gap-2 bg-amber-500 hover:bg-amber-600"
+                            >
+                              <Clock className="h-4 w-4" />
+                              Remettre en attente
+                            </Button>
+                          )}
+                          {vehicle.status === VehicleStatus.REJECTED && (
+                            <Button
+                              onClick={() => openActionDialog(vehicle, 'PENDING')}
+                              className="gap-2 bg-amber-500 hover:bg-amber-600"
+                            >
+                              <Clock className="h-4 w-4" />
+                              Remettre en attente
+                            </Button>
                           )}
                         </div>
                       </div>
@@ -613,98 +659,126 @@ export default function AdminVehiclesPage() {
                 </div>
 
                 {/* Admin Comment */}
-                {vehicleDetail.status === "REJECTED" && vehicleDetail.adminComment && (
-                  <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
-                    <p className="font-medium text-red-600 flex items-center gap-2 mb-1">
+                {vehicleDetail.adminComment && (
+                  <div className={`p-4 rounded-xl border ${vehicleDetail.status === "REJECTED" ? 'bg-red-500/10 border-red-500/20' : 'bg-muted/50 border-border'}`}>
+                    <p className={`font-medium flex items-center gap-2 mb-1 ${vehicleDetail.status === "REJECTED" ? 'text-red-600' : 'text-muted-foreground'}`}>
                       <AlertTriangle className="h-4 w-4" />
-                      Motif du refus
+                      Motif
                     </p>
-                    <p className="text-sm text-red-600">{vehicleDetail.adminComment}</p>
+                    <p className={`text-sm ${vehicleDetail.status === "REJECTED" ? 'text-red-600' : 'text-muted-foreground'}`}>{vehicleDetail.adminComment}</p>
                   </div>
                 )}
               </div>
 
-              {vehicleDetail.status === "PENDING" && (
-                <DialogFooter className="gap-2">
-                  <Button variant="outline" onClick={() => setVehicleDetailOpen(false)}>
-                    Fermer
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={() => {
-                      setSelectedVehicle(vehicleDetail);
-                      setRejectDialogOpen(true);
-                    }}
-                    className="gap-2"
-                  >
-                    <X className="h-4 w-4" />
-                    Refuser
-                  </Button>
-                  <Button
-                    onClick={() => approveMutation.mutate(vehicleDetail.id)}
-                    disabled={approveMutation.isPending}
-                    className="gap-2 bg-green-500 hover:bg-green-600"
-                  >
-                    {approveMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
+              <DialogFooter className="gap-2 flex-wrap">
+                <Button variant="outline" onClick={() => setVehicleDetailOpen(false)}>
+                  Fermer
+                </Button>
+                {vehicleDetail.status === "PENDING" && (
+                  <>
+                    <Button
+                      variant="destructive"
+                      onClick={() => openActionDialog(vehicleDetail, 'REJECTED')}
+                      className="gap-2"
+                    >
+                      <X className="h-4 w-4" />
+                      Refuser
+                    </Button>
+                    <Button
+                      onClick={() => openActionDialog(vehicleDetail, 'APPROVED')}
+                      className="gap-2 bg-green-500 hover:bg-green-600"
+                    >
                       <Check className="h-4 w-4" />
-                    )}
-                    Approuver
+                      Approuver
+                    </Button>
+                  </>
+                )}
+                {vehicleDetail.status === "APPROVED" && (
+                  <Button
+                    onClick={() => openActionDialog(vehicleDetail, 'PENDING')}
+                    className="gap-2 bg-amber-500 hover:bg-amber-600"
+                  >
+                    <Clock className="h-4 w-4" />
+                    Remettre en attente
                   </Button>
-                </DialogFooter>
-              )}
+                )}
+                {vehicleDetail.status === "REJECTED" && (
+                  <Button
+                    onClick={() => openActionDialog(vehicleDetail, 'PENDING')}
+                    className="gap-2 bg-amber-500 hover:bg-amber-600"
+                  >
+                    <Clock className="h-4 w-4" />
+                    Remettre en attente
+                  </Button>
+                )}
+              </DialogFooter>
             </>
           ) : null}
         </DialogContent>
       </Dialog>
 
-      {/* Reject Dialog */}
-      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+      {/* Action Dialog (Approve / Reject / Reset to Pending) */}
+      <Dialog open={actionDialogOpen} onOpenChange={(open) => { if (!open) closeActionDialog(); }}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
-              <XCircle className="h-5 w-5" />
-              Refuser le véhicule
-            </DialogTitle>
-            <DialogDescription>
-              {selectedVehicle?.brand} {selectedVehicle?.model} - {selectedVehicle?.licensePlate}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="comment">Motif du refus *</Label>
-              <Textarea
-                id="comment"
-                value={rejectComment}
-                onChange={(e) => setRejectComment(e.target.value)}
-                placeholder="Ex: Documents manquants, photos floues, informations incorrectes..."
-                rows={4}
-                className="resize-none"
-              />
-              <p className="text-xs text-muted-foreground">
-                Ce message sera visible par le propriétaire du véhicule.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>
-              Annuler
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmReject}
-              disabled={!rejectComment.trim() || rejectMutation.isPending}
-              className="gap-2"
-            >
-              {rejectMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <X className="h-4 w-4" />
-              )}
-              Confirmer le refus
-            </Button>
-          </DialogFooter>
+          {targetStatus && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  {targetStatus === 'APPROVED' && <CheckCircle2 className="h-5 w-5 text-green-500" />}
+                  {targetStatus === 'REJECTED' && <XCircle className="h-5 w-5 text-red-500" />}
+                  {targetStatus === 'PENDING' && <Clock className="h-5 w-5 text-amber-500" />}
+                  {statusActionConfig[targetStatus].title}
+                </DialogTitle>
+                <DialogDescription>
+                  {selectedVehicle?.brand} {selectedVehicle?.model} - {selectedVehicle?.licensePlate}
+                  <br />
+                  {statusActionConfig[targetStatus].description}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="action-comment">
+                    Motif {statusActionConfig[targetStatus].requireComment ? "*" : "(optionnel)"}
+                  </Label>
+                  <Textarea
+                    id="action-comment"
+                    value={actionComment}
+                    onChange={(e) => setActionComment(e.target.value)}
+                    placeholder="Ex: Documents manquants, photos floues, informations incorrectes..."
+                    rows={3}
+                    className="resize-none"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Ce message sera visible par le propriétaire du véhicule.
+                  </p>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={closeActionDialog}>
+                  Annuler
+                </Button>
+                <Button
+                  onClick={confirmAction}
+                  disabled={
+                    (statusActionConfig[targetStatus].requireComment && !actionComment.trim()) ||
+                    statusMutation.isPending
+                  }
+                  className={`gap-2 text-white ${statusActionConfig[targetStatus].buttonClass}`}
+                >
+                  {statusMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : targetStatus === 'APPROVED' ? (
+                    <Check className="h-4 w-4" />
+                  ) : targetStatus === 'REJECTED' ? (
+                    <X className="h-4 w-4" />
+                  ) : (
+                    <Clock className="h-4 w-4" />
+                  )}
+                  {statusActionConfig[targetStatus].buttonLabel}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>

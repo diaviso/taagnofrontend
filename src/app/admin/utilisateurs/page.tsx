@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,13 +23,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { adminService, AdminUser } from "@/lib/services/admin.service";
+import { adminService, AdminUser, UserDependencies } from "@/lib/services/admin.service";
 import { toast } from "sonner";
 import {
   Users,
   Search,
   Shield,
-  UserCog,
   Ban,
   Check,
   Eye,
@@ -38,11 +37,16 @@ import {
   MapPin,
   Calendar,
   Mail,
-  ArrowUpRight,
-  Activity,
   Crown,
   UserX,
   CheckCircle2,
+  Trash2,
+  AlertTriangle,
+  Key,
+  Ticket,
+  Clock,
+  FileText,
+  Image as ImageIcon,
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -55,6 +59,11 @@ export default function AdminUsersPage() {
   const [userDetailOpen, setUserDetailOpen] = useState(false);
   const [userDetail, setUserDetail] = useState<any>(null);
   const [loadingUserDetail, setLoadingUserDetail] = useState(false);
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
+  const [dependencies, setDependencies] = useState<UserDependencies | null>(null);
+  const [loadingDeps, setLoadingDeps] = useState(false);
 
   const { data: users, isLoading } = useQuery({
     queryKey: ["admin", "users", searchQuery],
@@ -84,21 +93,81 @@ export default function AdminUsersPage() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => adminService.deleteUser(id),
+    onSuccess: () => {
+      toast.success("Utilisateur supprimé avec succès");
+      queryClient.invalidateQueries({ queryKey: ["admin"] });
+      setDeleteDialogOpen(false);
+      setUserDetailOpen(false);
+      setDeleteTarget(null);
+      setDependencies(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || "Erreur lors de la suppression");
+    },
+  });
+
   const handleViewUser = async (id: string) => {
     setLoadingUserDetail(true);
     try {
       const data = await adminService.getUserById(id);
       setUserDetail(data);
       setUserDetailOpen(true);
-    } catch (error) {
+    } catch {
       toast.error("Erreur lors du chargement de l'utilisateur");
     } finally {
       setLoadingUserDetail(false);
     }
   };
 
+  const handleDeleteClick = async (user: AdminUser) => {
+    setDeleteTarget(user);
+    setLoadingDeps(true);
+    setDeleteDialogOpen(true);
+    try {
+      const deps = await adminService.getUserDependencies(user.id);
+      setDependencies(deps);
+    } catch {
+      toast.error("Erreur lors du chargement des dépendances");
+      setDeleteDialogOpen(false);
+    } finally {
+      setLoadingDeps(false);
+    }
+  };
+
   const getInitials = (firstName?: string | null, lastName?: string | null) => {
     return `${firstName?.charAt(0) || ""}${lastName?.charAt(0) || ""}`.toUpperCase() || "?";
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "APPROVED": return <Badge className="bg-green-500/10 text-green-600 border-green-500/20">Approuvé</Badge>;
+      case "PENDING": return <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20">En attente</Badge>;
+      case "REJECTED": return <Badge className="bg-red-500/10 text-red-600 border-red-500/20">Refusé</Badge>;
+      default: return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const getTripStatusBadge = (status: string) => {
+    switch (status) {
+      case "OPEN": return <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">Ouvert</Badge>;
+      case "FULL": return <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20">Complet</Badge>;
+      case "COMPLETED": return <Badge className="bg-green-500/10 text-green-600 border-green-500/20">Terminé</Badge>;
+      case "CANCELLED": return <Badge className="bg-red-500/10 text-red-600 border-red-500/20">Annulé</Badge>;
+      default: return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const getReservationStatusBadge = (status: string) => {
+    switch (status) {
+      case "PENDING": return <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20">En attente</Badge>;
+      case "CONFIRMED": return <Badge className="bg-green-500/10 text-green-600 border-green-500/20">Confirmée</Badge>;
+      case "REJECTED": return <Badge className="bg-red-500/10 text-red-600 border-red-500/20">Refusée</Badge>;
+      case "CANCELLED": return <Badge className="bg-gray-500/10 text-gray-600 border-gray-500/20">Annulée</Badge>;
+      case "COMPLETED": return <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">Terminée</Badge>;
+      default: return <Badge variant="outline">{status}</Badge>;
+    }
   };
 
   const filteredUsers = users?.filter((user: AdminUser) => {
@@ -245,7 +314,6 @@ export default function AdminUsersPage() {
             >
               <CardContent className="p-4">
                 <div className="flex flex-col md:flex-row md:items-center gap-4">
-                  {/* User Avatar & Info */}
                   <div className="flex items-center gap-4 flex-1">
                     <div className="relative">
                       <Avatar className={`h-14 w-14 ring-2 ${user.role === 'ADMIN' ? 'ring-purple-500/30' : 'ring-emerald-500/30'}`}>
@@ -299,18 +367,11 @@ export default function AdminUsersPage() {
                     </div>
                   </div>
 
-                  {/* Actions */}
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleViewUser(user.id)}
-                      className="gap-1"
-                    >
+                    <Button variant="outline" size="sm" onClick={() => handleViewUser(user.id)} className="gap-1">
                       <Eye className="h-4 w-4" />
                       Détails
                     </Button>
-
                     <Select
                       value={user.role}
                       onValueChange={(v) => updateRoleMutation.mutate({ id: user.id, role: v as 'USER' | 'ADMIN' })}
@@ -323,7 +384,6 @@ export default function AdminUsersPage() {
                         <SelectItem value="ADMIN">Admin</SelectItem>
                       </SelectContent>
                     </Select>
-
                     <Button
                       size="sm"
                       variant={user.isActive ? "destructive" : "default"}
@@ -334,15 +394,9 @@ export default function AdminUsersPage() {
                       {toggleActiveMutation.isPending ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : user.isActive ? (
-                        <>
-                          <Ban className="h-4 w-4" />
-                          Désactiver
-                        </>
+                        <><Ban className="h-4 w-4" /> Désactiver</>
                       ) : (
-                        <>
-                          <Check className="h-4 w-4" />
-                          Activer
-                        </>
+                        <><Check className="h-4 w-4" /> Activer</>
                       )}
                     </Button>
                   </div>
@@ -369,7 +423,7 @@ export default function AdminUsersPage() {
 
       {/* User Detail Dialog */}
       <Dialog open={userDetailOpen} onOpenChange={setUserDetailOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           {loadingUserDetail ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
@@ -389,93 +443,208 @@ export default function AdminUsersPage() {
                       {userDetail.firstName} {userDetail.lastName}
                       {userDetail.role === "ADMIN" && (
                         <Badge className="bg-purple-500/10 text-purple-600 border-purple-500/20 gap-1">
-                          <Shield className="h-3 w-3" />
-                          Admin
+                          <Shield className="h-3 w-3" /> Admin
                         </Badge>
                       )}
                     </DialogTitle>
                     <DialogDescription className="flex items-center gap-1">
-                      <Mail className="h-3 w-3" />
-                      {userDetail.email}
+                      <Mail className="h-3 w-3" /> {userDetail.email}
                     </DialogDescription>
                   </div>
                 </div>
               </DialogHeader>
 
               <div className="space-y-6 py-4">
-                {/* Status & Info */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 rounded-xl bg-muted/30">
-                    <p className="text-sm text-muted-foreground mb-1">Statut</p>
-                    <Badge variant={userDetail.isActive ? "default" : "destructive"} className="text-sm">
+                {/* Info Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="p-3 rounded-xl bg-muted/30">
+                    <p className="text-xs text-muted-foreground mb-1">Statut</p>
+                    <Badge variant={userDetail.isActive ? "default" : "destructive"} className="text-xs">
                       {userDetail.isActive ? "Actif" : "Désactivé"}
                     </Badge>
                   </div>
-                  <div className="p-4 rounded-xl bg-muted/30">
-                    <p className="text-sm text-muted-foreground mb-1">Inscrit le</p>
-                    <p className="font-medium">
-                      {format(new Date(userDetail.createdAt), "d MMMM yyyy", { locale: fr })}
+                  <div className="p-3 rounded-xl bg-muted/30">
+                    <p className="text-xs text-muted-foreground mb-1">Email vérifié</p>
+                    <Badge className={userDetail.emailVerified ? "bg-green-500/10 text-green-600 border-green-500/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"}>
+                      {userDetail.emailVerified ? "Oui" : "Non"}
+                    </Badge>
+                  </div>
+                  <div className="p-3 rounded-xl bg-muted/30">
+                    <p className="text-xs text-muted-foreground mb-1">Mode</p>
+                    <p className="font-medium text-sm">{userDetail.userMode || "Non défini"}</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-muted/30">
+                    <p className="text-xs text-muted-foreground mb-1">Inscrit le</p>
+                    <p className="font-medium text-sm">
+                      {format(new Date(userDetail.createdAt), "d MMM yyyy", { locale: fr })}
                     </p>
                   </div>
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="p-4 rounded-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border border-blue-500/10 text-center">
-                    <Car className="h-6 w-6 mx-auto text-blue-500 mb-1" />
-                    <p className="text-2xl font-bold text-blue-600">{userDetail.vehicles?.length || 0}</p>
+                <div className="grid grid-cols-4 gap-3">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border border-blue-500/10 text-center">
+                    <Car className="h-5 w-5 mx-auto text-blue-500 mb-1" />
+                    <p className="text-xl font-bold text-blue-600">{userDetail._count?.vehicles || 0}</p>
                     <p className="text-xs text-muted-foreground">Véhicules</p>
                   </div>
-                  <div className="p-4 rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/5 border border-green-500/10 text-center">
-                    <MapPin className="h-6 w-6 mx-auto text-green-500 mb-1" />
-                    <p className="text-2xl font-bold text-green-600">{userDetail._count?.carpoolTripsAsDriver || 0}</p>
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/5 border border-green-500/10 text-center">
+                    <MapPin className="h-5 w-5 mx-auto text-green-500 mb-1" />
+                    <p className="text-xl font-bold text-green-600">{userDetail._count?.carpoolTripsAsDriver || 0}</p>
                     <p className="text-xs text-muted-foreground">Trajets</p>
                   </div>
-                  <div className="p-4 rounded-xl bg-gradient-to-br from-purple-500/10 to-indigo-500/5 border border-purple-500/10 text-center">
-                    <Calendar className="h-6 w-6 mx-auto text-purple-500 mb-1" />
-                    <p className="text-2xl font-bold text-purple-600">{userDetail._count?.carpoolReservations || 0}</p>
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500/10 to-indigo-500/5 border border-purple-500/10 text-center">
+                    <Ticket className="h-5 w-5 mx-auto text-purple-500 mb-1" />
+                    <p className="text-xl font-bold text-purple-600">{userDetail._count?.carpoolReservations || 0}</p>
                     <p className="text-xs text-muted-foreground">Réservations</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-orange-500/10 to-amber-500/5 border border-orange-500/10 text-center">
+                    <Key className="h-5 w-5 mx-auto text-orange-500 mb-1" />
+                    <p className="text-xl font-bold text-orange-600">{userDetail._count?.rentalBookings || 0}</p>
+                    <p className="text-xs text-muted-foreground">Locations</p>
                   </div>
                 </div>
 
-                {/* Vehicles */}
-                {userDetail.vehicles && userDetail.vehicles.length > 0 && (
-                  <div>
-                    <h4 className="font-semibold mb-3 flex items-center gap-2">
+                {/* === PROPRIÉTAIRE SECTION === */}
+                {((userDetail.vehicles && userDetail.vehicles.length > 0) || (userDetail.carpoolTripsAsDriver && userDetail.carpoolTripsAsDriver.length > 0)) && (
+                  <div className="space-y-4">
+                    <h3 className="font-bold text-base flex items-center gap-2 border-b pb-2">
                       <Car className="h-4 w-4 text-blue-500" />
-                      Véhicules ({userDetail.vehicles.length})
-                    </h4>
-                    <div className="space-y-2">
-                      {userDetail.vehicles.map((v: any) => (
-                        <div key={v.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                              <Car className="h-5 w-5 text-blue-500" />
+                      Activité Propriétaire
+                    </h3>
+
+                    {/* Vehicles */}
+                    {userDetail.vehicles && userDetail.vehicles.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                          <Car className="h-3.5 w-3.5 text-blue-500" />
+                          Véhicules ({userDetail.vehicles.length})
+                        </h4>
+                        <div className="space-y-2">
+                          {userDetail.vehicles.map((v: any) => (
+                            <div key={v.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
+                              <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center overflow-hidden">
+                                  {v.photos && v.photos.length > 0 ? (
+                                    <img src={v.photos[0].url} alt="" className="w-full h-full object-cover" />
+                                  ) : (
+                                    <Car className="h-5 w-5 text-blue-500" />
+                                  )}
+                                </div>
+                                <div>
+                                  <p className="font-medium text-sm">{v.brand} {v.model} ({v.year})</p>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <span>{v.licensePlate}</span>
+                                    {v.isForCarpooling && <Badge variant="outline" className="text-[10px] px-1 py-0"><MapPin className="h-2.5 w-2.5 mr-0.5" />Covoit.</Badge>}
+                                    {v.isForRental && <Badge variant="outline" className="text-[10px] px-1 py-0"><Key className="h-2.5 w-2.5 mr-0.5" />Location</Badge>}
+                                    {v.rentalOffer && <span className="text-green-600">{v.rentalOffer.pricePerDay} FCFA/j</span>}
+                                  </div>
+                                </div>
+                              </div>
+                              {getStatusBadge(v.status)}
                             </div>
-                            <div>
-                              <p className="font-medium">{v.brand} {v.model}</p>
-                              <p className="text-xs text-muted-foreground">{v.licensePlate}</p>
-                            </div>
-                          </div>
-                          <Badge
-                            className={
-                              v.status === "APPROVED"
-                                ? "bg-green-500/10 text-green-600 border-green-500/20"
-                                : v.status === "PENDING"
-                                ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
-                                : "bg-red-500/10 text-red-600 border-red-500/20"
-                            }
-                          >
-                            {v.status === "APPROVED" ? "Approuvé" : v.status === "PENDING" ? "En attente" : "Refusé"}
-                          </Badge>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    )}
+
+                    {/* Carpool Trips as Driver */}
+                    {userDetail.carpoolTripsAsDriver && userDetail.carpoolTripsAsDriver.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                          <MapPin className="h-3.5 w-3.5 text-green-500" />
+                          Trajets proposés ({userDetail.carpoolTripsAsDriver.length})
+                        </h4>
+                        <div className="space-y-2">
+                          {userDetail.carpoolTripsAsDriver.map((trip: any) => (
+                            <div key={trip.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
+                              <div>
+                                <p className="font-medium text-sm">{trip.departureCity} → {trip.arrivalCity}</p>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <Clock className="h-3 w-3" />
+                                  {format(new Date(trip.departureTime), "d MMM yyyy HH:mm", { locale: fr })}
+                                  <span>|</span>
+                                  <span>{trip.pricePerSeat} FCFA/place</span>
+                                  <span>|</span>
+                                  <span>{trip._count?.reservations || 0} résa.</span>
+                                  {trip.vehicle && <span>| {trip.vehicle.brand} {trip.vehicle.model}</span>}
+                                </div>
+                              </div>
+                              {getTripStatusBadge(trip.status)}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* === VOYAGEUR SECTION === */}
+                {((userDetail.carpoolReservations && userDetail.carpoolReservations.length > 0) || (userDetail.rentalBookings && userDetail.rentalBookings.length > 0)) && (
+                  <div className="space-y-4">
+                    <h3 className="font-bold text-base flex items-center gap-2 border-b pb-2">
+                      <Ticket className="h-4 w-4 text-purple-500" />
+                      Activité Voyageur
+                    </h3>
+
+                    {/* Carpool Reservations */}
+                    {userDetail.carpoolReservations && userDetail.carpoolReservations.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                          <MapPin className="h-3.5 w-3.5 text-purple-500" />
+                          Réservations covoiturage ({userDetail.carpoolReservations.length})
+                        </h4>
+                        <div className="space-y-2">
+                          {userDetail.carpoolReservations.map((res: any) => (
+                            <div key={res.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
+                              <div>
+                                <p className="font-medium text-sm">
+                                  {res.trip?.departureCity || "?"} → {res.trip?.arrivalCity || "?"}
+                                </p>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <span>{res.seatsReserved} place(s)</span>
+                                  {res.trip?.driver && <span>| Conducteur: {res.trip.driver.firstName} {res.trip.driver.lastName}</span>}
+                                  {res.trip?.vehicle && <span>| {res.trip.vehicle.brand} {res.trip.vehicle.model}</span>}
+                                </div>
+                              </div>
+                              {getReservationStatusBadge(res.status)}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Rental Bookings */}
+                    {userDetail.rentalBookings && userDetail.rentalBookings.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                          <Key className="h-3.5 w-3.5 text-orange-500" />
+                          Locations ({userDetail.rentalBookings.length})
+                        </h4>
+                        <div className="space-y-2">
+                          {userDetail.rentalBookings.map((booking: any) => (
+                            <div key={booking.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
+                              <div>
+                                <p className="font-medium text-sm">
+                                  {booking.rentalOffer?.vehicle?.brand} {booking.rentalOffer?.vehicle?.model}
+                                </p>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <Calendar className="h-3 w-3" />
+                                  {format(new Date(booking.startDate), "d MMM", { locale: fr })} - {format(new Date(booking.endDate), "d MMM yyyy", { locale: fr })}
+                                  <span>| {booking.totalPrice} FCFA</span>
+                                </div>
+                              </div>
+                              {getReservationStatusBadge(booking.status)}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
-              <DialogFooter className="gap-2">
+              <DialogFooter className="gap-2 flex-wrap">
                 <Button variant="outline" onClick={() => setUserDetailOpen(false)}>
                   Fermer
                 </Button>
@@ -487,21 +656,128 @@ export default function AdminUsersPage() {
                   }}
                   className="gap-2"
                 >
-                  {userDetail.isActive ? (
-                    <>
-                      <Ban className="h-4 w-4" />
-                      Désactiver
-                    </>
-                  ) : (
-                    <>
-                      <Check className="h-4 w-4" />
-                      Activer
-                    </>
-                  )}
+                  {userDetail.isActive ? <><Ban className="h-4 w-4" /> Désactiver</> : <><Check className="h-4 w-4" /> Activer</>}
                 </Button>
+                {userDetail.role !== "ADMIN" && (
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      setUserDetailOpen(false);
+                      handleDeleteClick(userDetail);
+                    }}
+                    className="gap-2"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Supprimer
+                  </Button>
+                )}
               </DialogFooter>
             </>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Supprimer l&apos;utilisateur
+            </DialogTitle>
+            <DialogDescription>
+              {deleteTarget?.firstName} {deleteTarget?.lastName} ({deleteTarget?.email})
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {loadingDeps ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-red-500" />
+              </div>
+            ) : dependencies ? (
+              <>
+                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+                  <p className="font-semibold text-red-600 flex items-center gap-2 mb-3">
+                    <AlertTriangle className="h-4 w-4" />
+                    Cette action est irréversible !
+                  </p>
+                  <p className="text-sm text-red-600/80 mb-3">
+                    La suppression de cet utilisateur entraînera la perte définitive de toutes les données suivantes :
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {dependencies.vehicles > 0 && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Car className="h-4 w-4 text-red-500" />
+                        <span><strong>{dependencies.vehicles}</strong> véhicule(s)</span>
+                      </div>
+                    )}
+                    {dependencies.vehiclePhotos > 0 && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <ImageIcon className="h-4 w-4 text-red-500" />
+                        <span><strong>{dependencies.vehiclePhotos}</strong> photo(s)</span>
+                      </div>
+                    )}
+                    {dependencies.vehicleDocuments > 0 && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <FileText className="h-4 w-4 text-red-500" />
+                        <span><strong>{dependencies.vehicleDocuments}</strong> document(s)</span>
+                      </div>
+                    )}
+                    {dependencies.rentalOffers > 0 && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Key className="h-4 w-4 text-red-500" />
+                        <span><strong>{dependencies.rentalOffers}</strong> offre(s) de location</span>
+                      </div>
+                    )}
+                    {dependencies.carpoolTrips > 0 && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <MapPin className="h-4 w-4 text-red-500" />
+                        <span><strong>{dependencies.carpoolTrips}</strong> trajet(s) proposé(s)</span>
+                      </div>
+                    )}
+                    {dependencies.carpoolReservations > 0 && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Ticket className="h-4 w-4 text-red-500" />
+                        <span><strong>{dependencies.carpoolReservations}</strong> réservation(s)</span>
+                      </div>
+                    )}
+                    {dependencies.rentalBookings > 0 && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Calendar className="h-4 w-4 text-red-500" />
+                        <span><strong>{dependencies.rentalBookings}</strong> location(s)</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {dependencies.total === 0 && (
+                  <p className="text-sm text-muted-foreground text-center">
+                    Cet utilisateur n&apos;a aucune donnée associée.
+                  </p>
+                )}
+              </>
+            ) : null}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDeleteDialogOpen(false); setDeleteTarget(null); setDependencies(null); }}>
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+              disabled={deleteMutation.isPending || loadingDeps}
+              className="gap-2"
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+              Supprimer définitivement
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

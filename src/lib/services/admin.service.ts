@@ -27,6 +27,18 @@ export interface AdminUser {
   };
 }
 
+export interface UserDependencies {
+  vehicles: number;
+  vehiclePhotos: number;
+  vehicleDocuments: number;
+  rentalOffers: number;
+  carpoolTrips: number;
+  vehicleCarpoolTrips: number;
+  carpoolReservations: number;
+  rentalBookings: number;
+  total: number;
+}
+
 export const adminService = {
   // Statistics
   async getStatistics(): Promise<AdminStatistics> {
@@ -73,6 +85,21 @@ export const adminService = {
 
   async toggleUserActive(id: string): Promise<AdminUser> {
     const { data } = await api.patch(`/admin/users/${id}/toggle-active`);
+    return data;
+  },
+
+  async getUserDependencies(id: string): Promise<UserDependencies> {
+    const { data } = await api.get(`/admin/users/${id}/dependencies`);
+    return data;
+  },
+
+  async deleteUser(id: string): Promise<{ message: string }> {
+    const { data } = await api.delete(`/admin/users/${id}`);
+    return data;
+  },
+
+  async updateVehicleStatus(id: string, status: string, comment?: string): Promise<Vehicle> {
+    const { data } = await api.patch(`/admin/vehicles/${id}/status`, { status, comment });
     return data;
   },
 };
