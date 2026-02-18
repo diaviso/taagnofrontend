@@ -461,29 +461,62 @@ export default function VehicleDetailPage() {
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                       <div className="space-y-2">
-                        <Label>Sélectionner une photo</Label>
-                        <div className="flex items-center gap-3">
-                          <Input
-                            type="file"
-                            accept="image/jpeg,image/png,image/gif,image/webp"
-                            onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
-                            className="flex-1"
-                          />
-                        </div>
-                        {photoFile && (
-                          <p className="text-sm text-muted-foreground">
-                            Fichier sélectionné : {photoFile.name}
-                          </p>
+                        <Label>Photo du véhicule</Label>
+                        {photoFile ? (
+                          <div className="relative rounded-xl overflow-hidden border-2 border-amber-500/30 bg-amber-500/5">
+                            <img
+                              src={URL.createObjectURL(photoFile)}
+                              alt="Aperçu"
+                              className="w-full h-48 object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                className="gap-2"
+                                onClick={() => setPhotoFile(null)}
+                              >
+                                <X className="h-4 w-4" />
+                                Changer
+                              </Button>
+                            </div>
+                            <div className="p-3 flex items-center gap-2 text-sm">
+                              <Image className="h-4 w-4 text-amber-500" />
+                              <span className="truncate font-medium">{photoFile.name}</span>
+                              <span className="text-muted-foreground ml-auto">
+                                {(photoFile.size / 1024 / 1024).toFixed(1)} Mo
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <label className="flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed border-muted-foreground/25 hover:border-amber-500/50 hover:bg-amber-500/5 transition-all cursor-pointer group">
+                            <div className="h-12 w-12 rounded-full bg-amber-500/10 flex items-center justify-center group-hover:bg-amber-500/20 transition-colors">
+                              <Camera className="h-6 w-6 text-amber-500" />
+                            </div>
+                            <div className="text-center">
+                              <p className="font-medium text-sm">Cliquez pour sélectionner une photo</p>
+                              <p className="text-xs text-muted-foreground mt-1">JPG, PNG, GIF ou WebP • Max 10 Mo</p>
+                            </div>
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/png,image/gif,image/webp"
+                              onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
+                              className="hidden"
+                            />
+                          </label>
                         )}
                       </div>
-                      <label className="flex items-center gap-2 cursor-pointer">
+                      <label className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer">
                         <input
                           type="checkbox"
                           checked={isMainPhoto}
                           onChange={(e) => setIsMainPhoto(e.target.checked)}
-                          className="rounded"
+                          className="rounded h-4 w-4 accent-amber-500"
                         />
-                        <span>Définir comme photo principale</span>
+                        <div>
+                          <span className="text-sm font-medium">Définir comme photo principale</span>
+                          <p className="text-xs text-muted-foreground">Cette photo sera affichée en premier</p>
+                        </div>
                       </label>
                     </div>
                     <DialogFooter>
@@ -666,27 +699,66 @@ export default function VehicleDetailPage() {
                     <div className="space-y-4 py-4">
                       <div className="space-y-2">
                         <Label>Type de document</Label>
-                        <select
-                          value={documentType}
-                          onChange={(e) => setDocumentType(e.target.value as DocumentType)}
-                          className="w-full h-10 px-3 rounded-md border bg-background"
-                        >
-                          <option value={DocumentType.INSURANCE}>Assurance</option>
-                          <option value={DocumentType.REGISTRATION}>Carte grise</option>
-                          <option value={DocumentType.TECHNICAL_VISIT}>Visite technique</option>
-                        </select>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { value: DocumentType.INSURANCE, label: "Assurance", icon: Shield },
+                            { value: DocumentType.REGISTRATION, label: "Carte grise", icon: FileText },
+                            { value: DocumentType.TECHNICAL_VISIT, label: "Visite technique", icon: CheckCircle2 },
+                          ].map(({ value, label, icon: Icon }) => (
+                            <button
+                              key={value}
+                              type="button"
+                              onClick={() => setDocumentType(value)}
+                              className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all text-center ${
+                                documentType === value
+                                  ? "border-amber-500 bg-amber-500/10 text-amber-700"
+                                  : "border-muted hover:border-muted-foreground/30 hover:bg-muted/50"
+                              }`}
+                            >
+                              <Icon className={`h-5 w-5 ${documentType === value ? "text-amber-500" : "text-muted-foreground"}`} />
+                              <span className="text-xs font-medium leading-tight">{label}</span>
+                            </button>
+                          ))}
+                        </div>
                       </div>
                       <div className="space-y-2">
-                        <Label>Sélectionner un document</Label>
-                        <Input
-                          type="file"
-                          accept="application/pdf,image/jpeg,image/png"
-                          onChange={(e) => setDocumentFile(e.target.files?.[0] || null)}
-                        />
-                        {documentFile && (
-                          <p className="text-sm text-muted-foreground">
-                            Fichier sélectionné : {documentFile.name}
-                          </p>
+                        <Label>Fichier</Label>
+                        {documentFile ? (
+                          <div className="flex items-center gap-3 p-4 rounded-xl border-2 border-amber-500/30 bg-amber-500/5">
+                            <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                              <File className="h-5 w-5 text-amber-500" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{documentFile.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {(documentFile.size / 1024 / 1024).toFixed(1)} Mo • {documentFile.type.includes("pdf") ? "PDF" : "Image"}
+                              </p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-red-500"
+                              onClick={() => setDocumentFile(null)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <label className="flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed border-muted-foreground/25 hover:border-amber-500/50 hover:bg-amber-500/5 transition-all cursor-pointer group">
+                            <div className="h-12 w-12 rounded-full bg-amber-500/10 flex items-center justify-center group-hover:bg-amber-500/20 transition-colors">
+                              <Upload className="h-6 w-6 text-amber-500" />
+                            </div>
+                            <div className="text-center">
+                              <p className="font-medium text-sm">Cliquez pour sélectionner un fichier</p>
+                              <p className="text-xs text-muted-foreground mt-1">PDF, JPG ou PNG • Max 10 Mo</p>
+                            </div>
+                            <input
+                              type="file"
+                              accept="application/pdf,image/jpeg,image/png"
+                              onChange={(e) => setDocumentFile(e.target.files?.[0] || null)}
+                              className="hidden"
+                            />
+                          </label>
                         )}
                       </div>
                     </div>
