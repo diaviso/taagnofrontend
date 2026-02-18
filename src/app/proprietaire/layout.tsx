@@ -26,6 +26,7 @@ import {
   TrendingUp,
   ArrowLeftRight,
   MapPin,
+  Users,
 } from "lucide-react";
 import { UserMode } from "@/types";
 import { toast } from "sonner";
@@ -60,12 +61,28 @@ const menuItems = [
     activeColor: "bg-green-500",
   },
   {
+    href: "/proprietaire/reservations",
+    label: "Réservations trajets",
+    icon: Users,
+    color: "text-emerald-500",
+    bgColor: "bg-emerald-500/10",
+    activeColor: "bg-emerald-500",
+  },
+  {
     href: "/proprietaire/locations",
     label: "Mes locations",
     icon: Key,
     color: "text-purple-500",
     bgColor: "bg-purple-500/10",
     activeColor: "bg-purple-500",
+  },
+  {
+    href: "/proprietaire/demandes-location",
+    label: "Demandes location",
+    icon: Bell,
+    color: "text-violet-500",
+    bgColor: "bg-violet-500/10",
+    activeColor: "bg-violet-500",
   },
 ];
 

@@ -59,7 +59,7 @@ export default function NouveauTrajetPage() {
     mutationFn: carpoolService.createTrip,
     onSuccess: (data) => {
       toast.success("Trajet créé avec succès !");
-      router.push(`/carpool/${data.id}`);
+      router.push("/proprietaire/trajets");
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || "Erreur lors de la création");
