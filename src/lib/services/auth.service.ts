@@ -40,4 +40,14 @@ export const authService = {
     const response = await api.post('/auth/resend-code', { email });
     return response.data;
   },
+
+  async sendPhoneOtp(phone: string) {
+    const response = await api.post('/auth/send-phone-otp', { phone });
+    return response.data;
+  },
+
+  async verifyPhoneOtp(data: { phone: string; code: string }) {
+    const response = await api.post('/auth/verify-phone-otp', data);
+    return response.data;
+  },
 };

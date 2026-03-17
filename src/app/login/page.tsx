@@ -26,6 +26,7 @@ import {
   ArrowRight,
   CheckCircle2,
   Loader2,
+  Phone,
 } from "lucide-react";
 
 function LoginContent() {
@@ -447,6 +448,16 @@ function LoginContent() {
                   </span>
                 </div>
               </div>
+
+              {/* Phone (SMS) Login */}
+              <Button
+                onClick={() => router.push("/phone-auth")}
+                variant="outline"
+                className="w-full h-12 gap-3 text-sm font-medium hover:bg-primary/5 hover:border-primary/30 transition-all duration-300 mb-3"
+              >
+                <Phone className="h-5 w-5 text-primary" />
+                Continuer avec un numéro SMS
+              </Button>
 
               {/* Google Login */}
               <Button

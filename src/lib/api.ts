@@ -33,7 +33,7 @@ api.interceptors.response.use(
 );
 
 export const setAuthToken = (token: string) => {
-  Cookies.set('access_token', token, { expires: 7, secure: true, sameSite: 'lax' });
+  Cookies.set('access_token', token, { expires: 365, secure: true, sameSite: 'lax' });
 };
 
 export const removeAuthToken = () => {
