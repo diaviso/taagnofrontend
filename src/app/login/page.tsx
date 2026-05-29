@@ -57,6 +57,10 @@ function LoginContent() {
       if (token && !isProcessing) {
         setIsProcessing(true);
         setAuthToken(token);
+        // Retirer immédiatement le token de l'URL (historique, Referer, logs).
+        if (typeof window !== "undefined") {
+          window.history.replaceState({}, "", "/login");
+        }
         await refetch();
 
         const intendedAction = getIntendedAction();

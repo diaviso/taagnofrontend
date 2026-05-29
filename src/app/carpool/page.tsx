@@ -29,7 +29,6 @@ import {
   Search,
   Sparkles,
   Filter,
-  Star,
   HelpCircle,
   Zap
 } from "lucide-react";
@@ -304,10 +303,7 @@ export default function CarpoolPage() {
                                 <p className="font-medium">
                                   {trip.driver?.firstName}
                                 </p>
-                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                  <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                                  <span>4.8</span>
-                                </div>
+                                <p className="text-sm text-muted-foreground">Conducteur</p>
                               </div>
                             </div>
 

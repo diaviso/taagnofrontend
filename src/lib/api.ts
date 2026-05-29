@@ -19,13 +19,20 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Pages publiques où un 401 ne doit PAS provoquer de redirection brutale.
+const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email', '/phone-auth', '/'];
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       Cookies.remove('access_token');
       if (typeof window !== 'undefined') {
-        window.location.href = '/login';
+        const path = window.location.pathname;
+        const isPublic = PUBLIC_PATHS.includes(path);
+        if (!isPublic) {
+          window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(error);
@@ -33,7 +40,9 @@ api.interceptors.response.use(
 );
 
 export const setAuthToken = (token: string) => {
-  Cookies.set('access_token', token, { expires: 365, secure: true, sameSite: 'lax' });
+  // 30 jours (au lieu de 365) pour limiter la fenêtre d'un token volé.
+  // Idéalement : cookie httpOnly posé par le backend (cf. AUDIT_GLOBAL.md).
+  Cookies.set('access_token', token, { expires: 30, secure: true, sameSite: 'lax' });
 };
 
 export const removeAuthToken = () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -69,8 +69,13 @@ export default function NouveauVehiculePage() {
     createMutation.mutate(data);
   };
 
+  useEffect(() => {
+    if (!isAuthenticated || !isProprietaire) {
+      router.push("/");
+    }
+  }, [isAuthenticated, isProprietaire, router]);
+
   if (!isAuthenticated || !isProprietaire) {
-    router.push("/");
     return null;
   }
 

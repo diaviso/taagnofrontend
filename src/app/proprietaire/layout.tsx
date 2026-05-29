@@ -23,7 +23,6 @@ import {
   Sparkles,
   Bell,
   HelpCircle,
-  TrendingUp,
   ArrowLeftRight,
   MapPin,
   Users,
@@ -315,24 +314,6 @@ export default function ProprietaireLayout({ children }: ProprietaireLayoutProps
             ))}
           </nav>
 
-          {/* Stats Card (only when expanded) */}
-          {!sidebarCollapsed && (
-            <div className="p-4 animate-fade-in">
-              <div className="p-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 border border-amber-500/20">
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="h-4 w-4 text-amber-500" />
-                  <span className="text-sm font-medium">Performances</span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Votre activité ce mois
-                </p>
-                <div className="mt-2 h-2 rounded-full bg-amber-500/20 overflow-hidden">
-                  <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 animate-pulse" />
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Logout & Collapse */}
           <div className={cn(
             "p-4 border-t space-y-2",
@@ -388,9 +369,6 @@ export default function ProprietaireLayout({ children }: ProprietaireLayoutProps
           <div className="flex items-center gap-3">
             <Button variant="outline" size="icon" className="relative">
               <Bell className="h-4 w-4" />
-              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-[10px] text-white flex items-center justify-center">
-                3
-              </span>
             </Button>
 <Button
               variant="outline"
