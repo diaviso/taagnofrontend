@@ -63,6 +63,7 @@ export interface User {
   role: Role;
   userMode?: UserMode;
   isActive: boolean;
+  hasPassword?: boolean;
   createdAt: string;
   updatedAt: string;
 }

@@ -16,4 +16,9 @@ export const usersService = {
     const response = await api.patch('/users/me/mode', { userMode });
     return response.data;
   },
+
+  changePassword: async (data: { currentPassword?: string; newPassword: string }): Promise<{ message: string }> => {
+    const response = await api.patch('/users/me/password', data);
+    return response.data;
+  },
 };

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/providers";
@@ -12,7 +13,6 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import {
   Car,
@@ -25,7 +25,6 @@ import {
   LayoutDashboard,
   CarFront,
   Sparkles,
-  Search,
   MapPin,
   Key,
   ShoppingBag,
@@ -75,7 +74,7 @@ export function Navbar() {
       } else {
         router.push("/");
       }
-    } catch (error) {
+    } catch {
       toast.error("Erreur lors du changement de mode");
     }
   };
@@ -106,7 +105,6 @@ export function Navbar() {
     : voyageurNavItems;
 
   const modeLabel = isProprietaire ? "Propriétaire" : "Voyageur";
-  const modeColor = isProprietaire ? "amber" : "primary";
 
   return (
     <nav className={`sticky top-0 z-50 w-full transition-all duration-300 ${
@@ -119,12 +117,19 @@ export function Navbar() {
           <Link href={isProprietaire ? "/proprietaire" : "/"} className="flex items-center gap-2.5 group">
             <div className="relative">
               <div className="absolute inset-0 bg-primary/20 rounded-xl blur-lg group-hover:blur-xl transition-all opacity-0 group-hover:opacity-100" />
-              <div className={`relative flex h-10 w-10 items-center justify-center rounded-xl shadow-glow ${
+              <div className={`relative h-11 w-20 overflow-hidden rounded-xl shadow-glow ring-1 ring-white/20 ${
                 isProprietaire
                   ? "bg-gradient-to-br from-amber-500 to-orange-500"
                   : "bg-gradient-to-br from-primary to-primary/80"
               }`}>
-                <Car className="h-5 w-5 text-white" />
+                <Image
+                  src="/logo.png"
+                  alt="Taagno"
+                  fill
+                  sizes="80px"
+                  className="object-cover"
+                  priority
+                />
               </div>
             </div>
             <div className="flex flex-col">
@@ -303,6 +308,13 @@ export function Navbar() {
                     </DropdownMenuItem>
                   </>
                 )}
+
+                <DropdownMenuItem asChild className="gap-3 py-2.5 px-3 cursor-pointer rounded-lg">
+                  <Link href="/profil">
+                    <Settings className="h-4 w-4 text-muted-foreground" />
+                    Profil & sécurité
+                  </Link>
+                </DropdownMenuItem>
 
                 <DropdownMenuSeparator className="my-2" />
 
