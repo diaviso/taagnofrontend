@@ -66,21 +66,42 @@ function LoginContent() {
   const [registerConfirmPassword, setRegisterConfirmPassword] = useState("");
 
   // Redirection commune après authentification réussie (email ou téléphone).
+  // Règle : un profil incomplet (nom manquant, ou mode manquant) passe TOUJOURS
+  // par l'onboarding. Le nom est obligatoire — on ne le contourne jamais, même
+  // avec une "action voulue" en attente.
   const postAuthRedirect = async () => {
+    const { data: me } = await refetch();
+    const nameMissing = !me?.firstName || !me?.lastName;
+    const modeMissing = !me?.userMode;
+
+    if (nameMissing) {
+      router.push("/onboarding");
+      return;
+    }
+
     const intendedAction = getIntendedAction();
     if (intendedAction) {
-      try {
-        await usersService.updateUserMode(intendedAction.mode);
-        await refetch();
-        clearIntendedAction();
-        router.push(intendedAction.redirectUrl);
-      } catch {
-        clearIntendedAction();
-        router.push("/onboarding");
+      // Profil nommé mais sans mode : on peut appliquer le mode de l'action voulue.
+      if (modeMissing) {
+        try {
+          await usersService.updateUserMode(intendedAction.mode);
+          await refetch();
+        } catch {
+          router.push("/onboarding");
+          return;
+        }
       }
-    } else {
-      router.push("/onboarding");
+      clearIntendedAction();
+      router.push(intendedAction.redirectUrl);
+      return;
     }
+
+    if (modeMissing) {
+      router.push("/onboarding");
+      return;
+    }
+
+    router.push("/");
   };
 
   const startCountdown = () => {
@@ -126,15 +147,18 @@ function LoginContent() {
     }
   }, [searchParams]);
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated. L'onboarding (profil incomplet : nom OU
+  // mode manquant) est prioritaire sur l'action voulue.
   useEffect(() => {
     if (isAuthenticated && !isProcessing) {
+      if (needsOnboarding) {
+        router.push("/onboarding");
+        return;
+      }
       const intendedAction = getIntendedAction();
       if (intendedAction) {
         clearIntendedAction();
         router.push(intendedAction.redirectUrl);
-      } else if (needsOnboarding) {
-        router.push("/onboarding");
       } else {
         router.push("/");
       }

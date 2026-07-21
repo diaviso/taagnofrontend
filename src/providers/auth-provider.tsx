@@ -17,7 +17,7 @@ interface AuthContextType {
   needsOnboarding: boolean;
   setUserMode: (mode: UserMode) => Promise<void>;
   logout: () => void;
-  refetch: () => void;
+  refetch: () => Promise<{ data?: User | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,8 +35,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateModeMutation = useMutation({
     mutationFn: usersService.updateUserMode,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+    onSuccess: (updatedUser) => {
+      // Le backend renvoie l'utilisateur complet (sanitizé) : on met à jour le
+      // cache directement plutôt que d'invalider, pour que le nouveau mode soit
+      // reflété immédiatement (évite une redirection parasite post-onboarding).
+      queryClient.setQueryData(["auth", "me"], updatedUser);
     },
   });
 
@@ -64,7 +67,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     userMode,
     isVoyageur: userMode === UserMode.VOYAGEUR,
     isProprietaire: userMode === UserMode.PROPRIETAIRE,
-    needsOnboarding: !!user && !user.userMode,
+    // Le profil doit être complet : nom (prénom + nom) ET mode.
+    // Ne pas se baser uniquement sur le mode, sinon un compte avec un mode mais
+    // sans nom (ex. inscription téléphone) ne serait jamais invité à le compléter.
+    needsOnboarding: !!user && (!user.firstName || !user.lastName || !user.userMode),
     setUserMode,
     logout,
     refetch,

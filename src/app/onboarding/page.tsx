@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/providers";
 import { UserMode } from "@/types";
 import { usersService } from "@/lib/services";
+import { getIntendedAction, clearIntendedAction } from "@/lib/redirect";
 import {
   Car,
   Users,
@@ -47,7 +48,12 @@ export default function OnboardingPage() {
   const [otp, setOtp] = useState("");
   const [countdown, setCountdown] = useState(0);
 
+  // Devient true dès qu'on lance la redirection finale, pour empêcher l'effet
+  // ci-dessous d'écraser la destination (ex. /proprietaire) par "/".
+  const finishingRef = useRef(false);
+
   useEffect(() => {
+    if (finishingRef.current) return;
     if (!isLoading && !isAuthenticated) {
       router.push("/login");
     } else if (!isLoading && isAuthenticated && !needsOnboarding) {
@@ -56,13 +62,31 @@ export default function OnboardingPage() {
   }, [isLoading, isAuthenticated, needsOnboarding, router]);
 
   // Détermine l'étape de départ selon ce qui manque au compte :
-  // numéro vérifié → nom → mode. On ne demande que ce qui est absent.
+  // numéro vérifié → nom (prénom + nom) → mode. On ne demande que ce qui est absent.
   useEffect(() => {
     if (!user || step !== null) return;
     if (!user.phoneVerified) setStep("phone");
-    else if (!user.firstName) setStep("profile");
+    else if (!user.firstName || !user.lastName) setStep("profile");
     else setStep("mode");
   }, [user, step]);
+
+  // Pré-sélectionne le mode existant (utilisateur qui revient compléter son profil).
+  useEffect(() => {
+    if (user?.userMode) setSelectedMode(user.userMode);
+  }, [user]);
+
+  // Fin de l'onboarding : honore une éventuelle "action voulue", sinon redirige
+  // selon le mode.
+  const finish = (mode: UserMode) => {
+    finishingRef.current = true;
+    const intended = getIntendedAction();
+    if (intended) {
+      clearIntendedAction();
+      router.push(intended.redirectUrl);
+      return;
+    }
+    router.push(mode === UserMode.VOYAGEUR ? "/" : "/proprietaire");
+  };
 
   const startCountdown = () => {
     setCountdown(60);
@@ -77,9 +101,15 @@ export default function OnboardingPage() {
     }, 1000);
   };
 
-  // Après l'étape téléphone (validée ou passée) : nom si absent, sinon mode.
+  // Après l'étape téléphone (validée ou passée) : nom si absent, puis mode, sinon fin.
   const goAfterPhone = () => {
-    setStep(user?.firstName ? "mode" : "profile");
+    if (!user?.firstName || !user?.lastName) {
+      setStep("profile");
+    } else if (!user?.userMode) {
+      setStep("mode");
+    } else {
+      finish(user.userMode);
+    }
   };
 
   const handleSendPhoneOtp = async (e: React.FormEvent) => {
@@ -136,7 +166,12 @@ export default function OnboardingPage() {
     try {
       await usersService.updateProfile({ firstName: firstName.trim(), lastName: lastName.trim() });
       await refetch();
-      setStep("mode");
+      // Le nom est désormais complet : mode si absent, sinon fin.
+      if (user?.userMode) {
+        finish(user.userMode);
+      } else {
+        setStep("mode");
+      }
     } catch {
       toast.error("Impossible de sauvegarder le profil");
     } finally {
@@ -154,7 +189,7 @@ export default function OnboardingPage() {
     try {
       await setUserMode(selectedMode);
       toast.success("Bienvenue sur Taagno !");
-      router.push(selectedMode === UserMode.VOYAGEUR ? "/" : "/proprietaire");
+      finish(selectedMode);
     } catch {
       toast.error("Une erreur est survenue");
     } finally {
