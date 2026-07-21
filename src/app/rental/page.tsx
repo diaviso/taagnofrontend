@@ -58,7 +58,7 @@ export default function RentalPage() {
               Des véhicules vérifiés, des propriétaires de confiance, partout au Sénégal
             </p>
             {isAuthenticated && (
-              <Link href="/rental/create">
+              <Link href="/proprietaire/locations/nouvelle">
                 <Button className="gap-2 h-12 px-6 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-glow-yellow">
                   <Plus className="h-5 w-5" />
                   Proposer mon véhicule
@@ -211,7 +211,7 @@ export default function RentalPage() {
                       Soyez le premier à proposer votre véhicule !
                     </p>
                     {isAuthenticated && (
-                      <Link href="/rental/create">
+                      <Link href="/proprietaire/locations/nouvelle">
                         <Button className="gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white">
                           <Plus className="h-4 w-4" />
                           Proposer mon véhicule

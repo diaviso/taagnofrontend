@@ -1,6 +1,19 @@
 import { api } from '@/lib/api';
 import { User } from '@/types';
 
+// Normalise un numéro saisi (avec espaces, tirets, 0 initial…) vers le format
+// E.164 `+221XXXXXXXXX` attendu par la validation backend (/^\+?[0-9]{7,15}$/).
+// Doit refléter la normalisation du backend pour que le numéro envoyé à
+// send-phone-otp et verify-phone-otp soit identique et toujours valide.
+export function normalizePhone(phone: string): string {
+  const cleaned = phone.replace(/[\s.\-()]/g, '');
+  if (cleaned.startsWith('+')) return cleaned;
+  if (cleaned.startsWith('00')) return `+${cleaned.slice(2)}`;
+  if (cleaned.startsWith('0')) return `+221${cleaned.slice(1)}`;
+  if (/^\d{9}$/.test(cleaned)) return `+221${cleaned}`;
+  return `+${cleaned}`;
+}
+
 export const authService = {
   async getMe(): Promise<User> {
     const { data } = await api.get('/auth/me');
@@ -42,12 +55,17 @@ export const authService = {
   },
 
   async sendPhoneOtp(phone: string) {
-    const response = await api.post('/auth/send-phone-otp', { phone });
+    const response = await api.post('/auth/send-phone-otp', {
+      phone: normalizePhone(phone),
+    });
     return response.data;
   },
 
   async verifyPhoneOtp(data: { phone: string; code: string }) {
-    const response = await api.post('/auth/verify-phone-otp', data);
+    const response = await api.post('/auth/verify-phone-otp', {
+      phone: normalizePhone(data.phone),
+      code: data.code,
+    });
     return response.data;
   },
 };

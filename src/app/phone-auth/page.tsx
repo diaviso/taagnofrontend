@@ -40,16 +40,7 @@ export default function PhoneAuthPage() {
 
     setIsSubmitting(true);
     try {
-      const result = await authService.sendPhoneOtp(phone);
-
-      // Numéro déjà vérifié → connexion directe sans OTP
-      if (result.alreadyVerified && result.access_token) {
-        setAuthToken(result.access_token);
-        await refetch();
-        toast.success("Connexion réussie !");
-        router.push("/onboarding");
-        return;
-      }
+      await authService.sendPhoneOtp(phone);
 
       toast.success("Code SMS envoyé !");
       setStep("otp");
