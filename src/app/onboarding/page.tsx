@@ -17,24 +17,35 @@ import {
   Key,
   Search,
   ArrowRight,
+  ArrowLeft,
   CheckCircle2,
   Sparkles,
   Navigation,
   ShoppingBag,
   User,
+  Phone,
+  Shield,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
-type Step = "profile" | "mode";
+type Step = "phone" | "profile" | "mode";
+type PhoneSubStep = "enter" | "otp";
 
 export default function OnboardingPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading, setUserMode, needsOnboarding, refetch } = useAuth();
-  const [step, setStep] = useState<Step>("profile");
+  const [step, setStep] = useState<Step | null>(null);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [selectedMode, setSelectedMode] = useState<UserMode | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Étape téléphone (pour les comptes email/Google sans numéro vérifié)
+  const [phoneSubStep, setPhoneSubStep] = useState<PhoneSubStep>("enter");
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [countdown, setCountdown] = useState(0);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -44,12 +55,78 @@ export default function OnboardingPage() {
     }
   }, [isLoading, isAuthenticated, needsOnboarding, router]);
 
-  // Skip profile step if user already has a name (email/Google users)
+  // Détermine l'étape de départ selon ce qui manque au compte :
+  // numéro vérifié → nom → mode. On ne demande que ce qui est absent.
   useEffect(() => {
-    if (user?.firstName) {
-      setStep("mode");
+    if (!user || step !== null) return;
+    if (!user.phoneVerified) setStep("phone");
+    else if (!user.firstName) setStep("profile");
+    else setStep("mode");
+  }, [user, step]);
+
+  const startCountdown = () => {
+    setCountdown(60);
+    const interval = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+  };
+
+  // Après l'étape téléphone (validée ou passée) : nom si absent, sinon mode.
+  const goAfterPhone = () => {
+    setStep(user?.firstName ? "mode" : "profile");
+  };
+
+  const handleSendPhoneOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!phone) return;
+    setIsSubmitting(true);
+    try {
+      await usersService.sendPhoneOtp(phone);
+      toast.success("Code SMS envoyé !");
+      setPhoneSubStep("otp");
+      startCountdown();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Impossible d'envoyer le SMS");
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [user]);
+  };
+
+  const handleVerifyPhone = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otp.length !== 6) return;
+    setIsSubmitting(true);
+    try {
+      await usersService.verifyPhone(otp);
+      await refetch();
+      toast.success("Numéro vérifié !");
+      goAfterPhone();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Code invalide ou expiré");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResendPhoneOtp = async () => {
+    if (countdown > 0) return;
+    setIsSubmitting(true);
+    try {
+      await usersService.sendPhoneOtp(phone);
+      toast.success("Nouveau code envoyé !");
+      startCountdown();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Impossible de renvoyer le SMS");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,7 +162,7 @@ export default function OnboardingPage() {
     }
   };
 
-  if (isLoading || !isAuthenticated || !needsOnboarding) {
+  if (isLoading || !isAuthenticated || !needsOnboarding || step === null) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -102,7 +179,141 @@ export default function OnboardingPage() {
 
       <div className="relative z-10 w-full max-w-4xl">
 
-        {/* Step 1 — Profile (phone users only) */}
+        {/* Step 0 — Phone (email/Google users without a verified number) */}
+        {step === "phone" && (
+          <>
+            <div className="text-center mb-10">
+              <Badge className="mb-4 px-4 py-2 bg-primary/10 text-primary border-primary/20">
+                <Sparkles className="w-4 h-4 mr-2" />
+                Bienvenue sur Taagno !
+              </Badge>
+              <h1 className="text-4xl md:text-5xl font-bold mb-4">
+                Vérifiez votre <span className="text-gradient">numéro</span>
+              </h1>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                Votre numéro permet aux conducteurs et voyageurs de vous joindre
+              </p>
+            </div>
+
+            <div className="max-w-md mx-auto">
+              <Card className="border-0 shadow-elevated">
+                <CardContent className="p-8">
+                  <div className="flex justify-center mb-6">
+                    <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                      <Phone className="h-8 w-8 text-primary" />
+                    </div>
+                  </div>
+
+                  {phoneSubStep === "enter" ? (
+                    <form onSubmit={handleSendPhoneOtp} className="space-y-5">
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Numéro de téléphone</Label>
+                        <div className="relative">
+                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="phone"
+                            type="tel"
+                            placeholder="+221 77 123 45 67"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            className="pl-10 h-12"
+                            required
+                            autoFocus
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Format: +221XXXXXXXXX ou 7XXXXXXXX
+                        </p>
+                      </div>
+
+                      <Button
+                        type="submit"
+                        className="w-full h-12 gap-2"
+                        disabled={isSubmitting || !phone}
+                      >
+                        {isSubmitting ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <ArrowRight className="h-4 w-4" />
+                        )}
+                        {isSubmitting ? "Envoi en cours..." : "Recevoir le code SMS"}
+                      </Button>
+                    </form>
+                  ) : (
+                    <form onSubmit={handleVerifyPhone} className="space-y-5">
+                      <div className="space-y-2">
+                        <Label htmlFor="otp">Code de vérification</Label>
+                        <Input
+                          id="otp"
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          placeholder="123456"
+                          value={otp}
+                          onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                          className="h-14 text-center text-2xl font-bold tracking-[0.5em]"
+                          required
+                          maxLength={6}
+                          autoFocus
+                        />
+                        <p className="text-xs text-muted-foreground text-center">
+                          Code à 6 chiffres envoyé au {phone}
+                        </p>
+                      </div>
+
+                      <Button
+                        type="submit"
+                        className="w-full h-12 gap-2"
+                        disabled={isSubmitting || otp.length !== 6}
+                      >
+                        {isSubmitting ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Shield className="h-4 w-4" />
+                        )}
+                        {isSubmitting ? "Vérification..." : "Valider le code"}
+                      </Button>
+
+                      <div className="text-center space-y-2">
+                        <button
+                          type="button"
+                          onClick={handleResendPhoneOtp}
+                          disabled={countdown > 0 || isSubmitting}
+                          className="text-sm text-primary hover:underline disabled:text-muted-foreground disabled:no-underline disabled:cursor-not-allowed"
+                        >
+                          {countdown > 0 ? `Renvoyer le code (${countdown}s)` : "Renvoyer le code"}
+                        </button>
+                        <br />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPhoneSubStep("enter");
+                            setOtp("");
+                          }}
+                          className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                        >
+                          <ArrowLeft className="h-3 w-3" /> Changer de numéro
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
+                  <div className="mt-6 pt-4 border-t border-border/50 text-center">
+                    <button
+                      type="button"
+                      onClick={goAfterPhone}
+                      className="text-sm text-muted-foreground hover:text-foreground"
+                    >
+                      Passer pour l'instant
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </>
+        )}
+
+        {/* Step 1 — Profile (users without a name) */}
         {step === "profile" && (
           <>
             <div className="text-center mb-10">

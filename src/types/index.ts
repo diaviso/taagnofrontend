@@ -60,6 +60,8 @@ export interface User {
   firstName: string;
   lastName: string;
   photoUrl?: string;
+  phone?: string | null;
+  phoneVerified?: boolean;
   role: Role;
   userMode?: UserMode;
   isActive: boolean;
