@@ -27,10 +27,11 @@ import {
   Phone,
   Shield,
   Loader2,
+  KeyRound,
 } from "lucide-react";
 import { toast } from "sonner";
 
-type Step = "phone" | "profile" | "mode";
+type Step = "phone" | "pin" | "profile" | "mode";
 type PhoneSubStep = "enter" | "otp";
 
 export default function OnboardingPage() {
@@ -48,6 +49,9 @@ export default function OnboardingPage() {
   const [otp, setOtp] = useState("");
   const [countdown, setCountdown] = useState(0);
 
+  // Étape PIN
+  const [pin, setPin] = useState("");
+
   // Devient true dès qu'on lance la redirection finale, pour empêcher l'effet
   // ci-dessous d'écraser la destination (ex. /proprietaire) par "/".
   const finishingRef = useRef(false);
@@ -60,15 +64,6 @@ export default function OnboardingPage() {
       router.push("/");
     }
   }, [isLoading, isAuthenticated, needsOnboarding, router]);
-
-  // Détermine l'étape de départ selon ce qui manque au compte :
-  // numéro vérifié → nom (prénom + nom) → mode. On ne demande que ce qui est absent.
-  useEffect(() => {
-    if (!user || step !== null) return;
-    if (!user.phoneVerified) setStep("phone");
-    else if (!user.firstName || !user.lastName) setStep("profile");
-    else setStep("mode");
-  }, [user, step]);
 
   // Pré-sélectionne le mode existant (utilisateur qui revient compléter son profil).
   useEffect(() => {
@@ -88,6 +83,24 @@ export default function OnboardingPage() {
     router.push(mode === UserMode.VOYAGEUR ? "/" : "/proprietaire");
   };
 
+  // Étapes ordonnées : numéro vérifié → PIN → nom → mode. On avance vers la
+  // première info manquante ; si tout est complet, on termine.
+  const advance = (u?: { phoneVerified?: boolean; hasPin?: boolean; firstName?: string | null; lastName?: string | null; userMode?: UserMode } | null) => {
+    if (!u) return;
+    if (!u.phoneVerified) setStep("phone");
+    else if (!u.hasPin) setStep("pin");
+    else if (!u.firstName || !u.lastName) setStep("profile");
+    else if (!u.userMode) setStep("mode");
+    else finish(u.userMode);
+  };
+
+  // Étape de départ, calculée une fois l'utilisateur chargé.
+  useEffect(() => {
+    if (!user || step !== null) return;
+    advance(user);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, step]);
+
   const startCountdown = () => {
     setCountdown(60);
     const interval = setInterval(() => {
@@ -101,14 +114,19 @@ export default function OnboardingPage() {
     }, 1000);
   };
 
-  // Après l'étape téléphone (validée ou passée) : nom si absent, puis mode, sinon fin.
-  const goAfterPhone = () => {
-    if (!user?.firstName || !user?.lastName) {
-      setStep("profile");
-    } else if (!user?.userMode) {
-      setStep("mode");
-    } else {
-      finish(user.userMode);
+  const handleSetPin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pin.length !== 4) return;
+    setIsSubmitting(true);
+    try {
+      await usersService.setPin(pin);
+      const { data: me } = await refetch();
+      toast.success("Code PIN enregistré !");
+      advance(me);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Code PIN invalide");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -134,9 +152,9 @@ export default function OnboardingPage() {
     setIsSubmitting(true);
     try {
       await usersService.verifyPhone(otp);
-      await refetch();
+      const { data: me } = await refetch();
       toast.success("Numéro vérifié !");
-      goAfterPhone();
+      advance(me);
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Code invalide ou expiré");
     } finally {
@@ -165,13 +183,8 @@ export default function OnboardingPage() {
     setIsSubmitting(true);
     try {
       await usersService.updateProfile({ firstName: firstName.trim(), lastName: lastName.trim() });
-      await refetch();
-      // Le nom est désormais complet : mode si absent, sinon fin.
-      if (user?.userMode) {
-        finish(user.userMode);
-      } else {
-        setStep("mode");
-      }
+      const { data: me } = await refetch();
+      advance(me);
     } catch {
       toast.error("Impossible de sauvegarder le profil");
     } finally {
@@ -332,16 +345,61 @@ export default function OnboardingPage() {
                       </div>
                     </form>
                   )}
+                </CardContent>
+              </Card>
+            </div>
+          </>
+        )}
 
-                  <div className="mt-6 pt-4 border-t border-border/50 text-center">
-                    <button
-                      type="button"
-                      onClick={goAfterPhone}
-                      className="text-sm text-muted-foreground hover:text-foreground"
-                    >
-                      Passer pour l'instant
-                    </button>
+        {/* Step 0b — PIN (tous les comptes définissent un code à 4 chiffres) */}
+        {step === "pin" && (
+          <>
+            <div className="text-center mb-10">
+              <Badge className="mb-4 px-4 py-2 bg-primary/10 text-primary border-primary/20">
+                <Sparkles className="w-4 h-4 mr-2" />
+                Presque terminé !
+              </Badge>
+              <h1 className="text-4xl md:text-5xl font-bold mb-4">
+                Créez votre <span className="text-gradient">code PIN</span>
+              </h1>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                Un code à 4 chiffres pour vous reconnecter rapidement, sans SMS
+              </p>
+            </div>
+
+            <div className="max-w-md mx-auto">
+              <Card className="border-0 shadow-elevated">
+                <CardContent className="p-8">
+                  <div className="flex justify-center mb-6">
+                    <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                      <KeyRound className="h-8 w-8 text-primary" />
+                    </div>
                   </div>
+                  <form onSubmit={handleSetPin} className="space-y-5">
+                    <div className="space-y-2">
+                      <Label htmlFor="pin">Code PIN (4 chiffres)</Label>
+                      <Input
+                        id="pin"
+                        type="password"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        placeholder="••••"
+                        value={pin}
+                        onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                        className="h-14 text-center text-2xl font-bold tracking-[0.8em]"
+                        required
+                        maxLength={4}
+                        autoFocus
+                      />
+                      <p className="text-xs text-muted-foreground text-center">
+                        Évitez 0000, 1234 et autres codes trop simples
+                      </p>
+                    </div>
+                    <Button type="submit" className="w-full h-12 gap-2" disabled={isSubmitting || pin.length !== 4}>
+                      {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+                      {isSubmitting ? "Enregistrement..." : "Continuer"}
+                    </Button>
+                  </form>
                 </CardContent>
               </Card>
             </div>

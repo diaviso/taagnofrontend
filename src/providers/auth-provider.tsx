@@ -67,10 +67,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     userMode,
     isVoyageur: userMode === UserMode.VOYAGEUR,
     isProprietaire: userMode === UserMode.PROPRIETAIRE,
-    // Le profil doit être complet : nom (prénom + nom) ET mode.
-    // Ne pas se baser uniquement sur le mode, sinon un compte avec un mode mais
-    // sans nom (ex. inscription téléphone) ne serait jamais invité à le compléter.
-    needsOnboarding: !!user && (!user.firstName || !user.lastName || !user.userMode),
+    // Profil complet requis : numéro vérifié + PIN + nom (prénom+nom) + mode.
+    // Les admins en sont exemptés (ils se connectent par email et vont sur /admin).
+    needsOnboarding:
+      !!user &&
+      user.role !== Role.ADMIN &&
+      (!user.phoneVerified ||
+        !user.hasPin ||
+        !user.firstName ||
+        !user.lastName ||
+        !user.userMode),
     setUserMode,
     logout,
     refetch,

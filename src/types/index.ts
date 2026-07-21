@@ -66,6 +66,7 @@ export interface User {
   userMode?: UserMode;
   isActive: boolean;
   hasPassword?: boolean;
+  hasPin?: boolean;
   createdAt: string;
   updatedAt: string;
 }

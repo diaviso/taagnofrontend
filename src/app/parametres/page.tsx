@@ -34,11 +34,10 @@ export default function ParametresPage() {
   const [lastName, setLastName] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
 
-  // Mot de passe
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [savingPassword, setSavingPassword] = useState(false);
+  // Code PIN
+  const [newPin, setNewPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [savingPin, setSavingPin] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -69,11 +68,6 @@ export default function ParametresPage() {
     router.push("/");
   };
 
-  const hasPassword = user?.hasPassword ?? false;
-
-  const isPasswordStrong = (pwd: string) =>
-    pwd.length >= 8 && /[a-z]/.test(pwd) && /[A-Z]/.test(pwd) && /\d/.test(pwd);
-
   const handleSaveProfile = async () => {
     if (!firstName.trim() || !lastName.trim()) {
       toast.error("Le prénom et le nom sont requis");
@@ -98,41 +92,29 @@ export default function ParametresPage() {
     }
   };
 
-  const handleChangePassword = async () => {
-    if (hasPassword && !currentPassword) {
-      toast.error("Veuillez entrer votre mot de passe actuel");
+  const handleChangePin = async () => {
+    if (!/^\d{4}$/.test(newPin)) {
+      toast.error("Le code PIN doit contenir exactement 4 chiffres");
       return;
     }
-    if (!isPasswordStrong(newPassword)) {
-      toast.error(
-        "Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule et un chiffre"
-      );
+    if (newPin !== confirmPin) {
+      toast.error("Les codes PIN ne correspondent pas");
       return;
     }
-    if (newPassword !== confirmPassword) {
-      toast.error("Les mots de passe ne correspondent pas");
-      return;
-    }
-    setSavingPassword(true);
+    setSavingPin(true);
     try {
-      await usersService.changePassword({
-        currentPassword: hasPassword ? currentPassword : undefined,
-        newPassword,
-      });
+      await usersService.setPin(newPin);
       await refetch();
-      toast.success(
-        hasPassword ? "Mot de passe modifié" : "Mot de passe défini ! Vous pouvez maintenant vous connecter par email."
-      );
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
+      toast.success("Code PIN mis à jour");
+      setNewPin("");
+      setConfirmPin("");
     } catch (error: unknown) {
       const message =
         (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || "Erreur lors du changement de mot de passe";
+          ?.message || "Erreur lors du changement de code PIN";
       toast.error(message);
     } finally {
-      setSavingPassword(false);
+      setSavingPin(false);
     }
   };
 
@@ -262,7 +244,7 @@ export default function ParametresPage() {
             </CardContent>
           </Card>
 
-          {/* Security / Password Section */}
+          {/* Security / PIN Section */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -270,60 +252,49 @@ export default function ParametresPage() {
                 Sécurité
               </CardTitle>
               <CardDescription>
-                {hasPassword
-                  ? "Changez votre mot de passe"
-                  : "Définissez un mot de passe pour pouvoir vous connecter par email (et sur l'application mobile)"}
+                Changez votre code PIN (4 chiffres) — celui que vous utilisez pour vous connecter
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4 max-w-md">
-                {hasPassword && (
-                  <div className="space-y-2">
-                    <Label htmlFor="currentPassword">Mot de passe actuel</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="currentPassword"
-                        type="password"
-                        className="pl-10"
-                        value={currentPassword}
-                        onChange={(e) => setCurrentPassword(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                )}
                 <div className="space-y-2">
-                  <Label htmlFor="newPassword">
-                    {hasPassword ? "Nouveau mot de passe" : "Mot de passe"}
-                  </Label>
+                  <Label htmlFor="newPin">Nouveau code PIN</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      id="newPassword"
+                      id="newPin"
                       type="password"
-                      className="pl-10"
-                      placeholder="Min. 8 caractères, 1 maj, 1 min, 1 chiffre"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
+                      inputMode="numeric"
+                      className="pl-10 tracking-[0.5em]"
+                      placeholder="••••"
+                      maxLength={4}
+                      value={newPin}
+                      onChange={(e) => setNewPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
                     />
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Évitez 0000, 1234 et autres codes trop simples
+                  </p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
+                  <Label htmlFor="confirmPin">Confirmer le code PIN</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      id="confirmPassword"
+                      id="confirmPin"
                       type="password"
-                      className="pl-10"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      inputMode="numeric"
+                      className="pl-10 tracking-[0.5em]"
+                      placeholder="••••"
+                      maxLength={4}
+                      value={confirmPin}
+                      onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
                     />
                   </div>
                 </div>
-                <Button onClick={handleChangePassword} disabled={savingPassword} className="gap-2">
-                  {savingPassword && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {hasPassword ? "Modifier le mot de passe" : "Définir le mot de passe"}
+                <Button onClick={handleChangePin} disabled={savingPin || newPin.length !== 4} className="gap-2">
+                  {savingPin && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Modifier le code PIN
                 </Button>
               </div>
             </CardContent>

@@ -68,4 +68,21 @@ export const authService = {
     });
     return response.data;
   },
+
+  // Étape suivante sans révéler l'existence du compte : 'pin' (connexion) ou 'otp'.
+  async checkPhone(phone: string): Promise<{ nextStep: 'pin' | 'otp' }> {
+    const response = await api.post('/auth/phone/check', {
+      phone: normalizePhone(phone),
+    });
+    return response.data;
+  },
+
+  // Connexion sans SMS : numéro + PIN.
+  async pinLogin(data: { phone: string; pin: string }) {
+    const response = await api.post('/auth/pin/login', {
+      phone: normalizePhone(data.phone),
+      pin: data.pin,
+    });
+    return response.data;
+  },
 };

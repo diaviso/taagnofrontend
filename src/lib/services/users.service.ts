@@ -35,4 +35,10 @@ export const usersService = {
     const response = await api.post('/users/me/phone/verify', { code });
     return response.data;
   },
+
+  // Définit ou change le code PIN (4 chiffres) du compte courant.
+  setPin: async (pin: string): Promise<{ message: string }> => {
+    const response = await api.post('/users/me/pin', { pin });
+    return response.data;
+  },
 };
