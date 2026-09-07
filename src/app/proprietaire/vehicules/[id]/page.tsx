@@ -749,12 +749,12 @@ export default function VehicleDetailPage() {
                               <Upload className="h-6 w-6 text-amber-500" />
                             </div>
                             <div className="text-center">
-                              <p className="font-medium text-sm">Cliquez pour sélectionner un fichier</p>
-                              <p className="text-xs text-muted-foreground mt-1">PDF, JPG ou PNG • Max 10 Mo</p>
+                              <p className="font-medium text-sm">Cliquez pour prendre/choisir une photo</p>
+                              <p className="text-xs text-muted-foreground mt-1">Photo JPG, PNG ou WebP • Max 10 Mo</p>
                             </div>
                             <input
                               type="file"
-                              accept="application/pdf,image/jpeg,image/png"
+                              accept="image/jpeg,image/png,image/webp"
                               onChange={(e) => setDocumentFile(e.target.files?.[0] || null)}
                               className="hidden"
                             />
