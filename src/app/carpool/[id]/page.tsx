@@ -22,6 +22,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { carpoolService } from "@/lib/services";
+import { RatingDisplay } from "@/components/reviews/rating-display";
 import { useAuth } from "@/providers";
 import { toast } from "sonner";
 import { MapPin, Calendar, Users, Car, ArrowLeft, Check, X, Clock, Star, Shield, Sparkles } from "lucide-react";
@@ -279,10 +280,8 @@ export default function TripDetailPage() {
                       {trip.driver?.firstName} {trip.driver?.lastName}
                     </p>
                     <p className="text-sm text-muted-foreground">{trip.driver?.email}</p>
-                    <div className="flex items-center gap-1 mt-1">
-                      <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                      <span className="text-sm font-medium">4.8</span>
-                      <span className="text-sm text-muted-foreground">(12 avis)</span>
+                    <div className="mt-1">
+                      <RatingDisplay sum={trip.driver?.ratingSum} count={trip.driver?.ratingCount} size={16} />
                     </div>
                   </div>
                 </div>

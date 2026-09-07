@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/providers";
-import { carpoolService } from "@/lib/services";
+import { carpoolService, reviewsService } from "@/lib/services";
+import { ReviewDialog } from "@/components/reviews/review-dialog";
 import { CarpoolReservation, CarpoolReservationStatus } from "@/types";
 import {
   MapPin,
@@ -24,6 +25,7 @@ import {
   Search,
   Coins,
   X,
+  Star,
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -39,6 +41,13 @@ export default function MesReservationsPage() {
     queryFn: carpoolService.getMyReservations,
     enabled: isAuthenticated,
   });
+
+  const { data: given, refetch: refetchGiven } = useQuery({
+    queryKey: ["reviews", "given"],
+    queryFn: reviewsService.getGiven,
+    enabled: isAuthenticated,
+  });
+  const reviewedSet = new Set(given?.carpoolReservationIds ?? []);
 
   const cancelMutation = useMutation({
     mutationFn: (reservationId: string) => carpoolService.cancelReservation(reservationId),
@@ -201,7 +210,30 @@ export default function MesReservationsPage() {
                           <StatusIcon className="h-3 w-3" />
                           {statusConfig.label}
                         </Badge>
-                        {(reservation.status === CarpoolReservationStatus.PENDING || 
+                        {reservation.status === CarpoolReservationStatus.COMPLETED &&
+                          trip?.driver &&
+                          !reviewedSet.has(reservation.id) && (
+                            <ReviewDialog
+                              carpoolReservationId={reservation.id}
+                              targetName={trip.driver.firstName || "le conducteur"}
+                              onReviewed={refetchGiven}
+                              trigger={
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-1"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }}
+                                >
+                                  <Star className="h-4 w-4" />
+                                  Noter
+                                </Button>
+                              }
+                            />
+                          )}
+                        {(reservation.status === CarpoolReservationStatus.PENDING ||
                           reservation.status === CarpoolReservationStatus.CONFIRMED) && (
                           <Button
                             variant="ghost"

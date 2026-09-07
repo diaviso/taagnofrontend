@@ -20,7 +20,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { carpoolService } from "@/lib/services";
+import { carpoolService, reviewsService } from "@/lib/services";
+import { ReviewDialog } from "@/components/reviews/review-dialog";
 import { CarpoolTrip, CarpoolTripStatus, CarpoolReservation, CarpoolReservationStatus } from "@/types";
 import { toast } from "sonner";
 import {
@@ -38,6 +39,7 @@ import {
   ArrowRight,
   Inbox,
   Filter,
+  Star,
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -51,6 +53,12 @@ export default function ProprietaireReservationsPage() {
     queryKey: ["carpool", "trips", "mine"],
     queryFn: carpoolService.getMyTrips,
   });
+
+  const { data: given, refetch: refetchGiven } = useQuery({
+    queryKey: ["reviews", "given"],
+    queryFn: reviewsService.getGiven,
+  });
+  const reviewedSet = new Set(given?.carpoolReservationIds ?? []);
 
   const acceptMutation = useMutation({
     mutationFn: (reservationId: string) => carpoolService.acceptReservation(reservationId),
@@ -273,6 +281,22 @@ export default function ProprietaireReservationsPage() {
                         <StatusIcon className="h-3 w-3" />
                         {statusConfig.label}
                       </Badge>
+
+                      {reservation.status === CarpoolReservationStatus.COMPLETED &&
+                        reservation.passenger &&
+                        !reviewedSet.has(reservation.id) && (
+                          <ReviewDialog
+                            carpoolReservationId={reservation.id}
+                            targetName={reservation.passenger.firstName || "le passager"}
+                            onReviewed={refetchGiven}
+                            trigger={
+                              <Button size="sm" variant="outline" className="gap-1.5">
+                                <Star className="h-4 w-4" />
+                                Noter
+                              </Button>
+                            }
+                          />
+                        )}
 
                       {isPending && (
                         <div className="flex items-center gap-2">

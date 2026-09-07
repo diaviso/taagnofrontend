@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/providers";
-import { rentalService } from "@/lib/services";
+import { rentalService, reviewsService } from "@/lib/services";
+import { ReviewDialog } from "@/components/reviews/review-dialog";
 import { RentalBooking, RentalBookingStatus } from "@/types";
 import {
   Car,
@@ -22,6 +23,7 @@ import {
   Search,
   ShoppingBag,
   X,
+  Star,
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -37,6 +39,13 @@ export default function MesLocationsPage() {
     queryFn: rentalService.getMyBookings,
     enabled: isAuthenticated,
   });
+
+  const { data: given, refetch: refetchGiven } = useQuery({
+    queryKey: ["reviews", "given"],
+    queryFn: reviewsService.getGiven,
+    enabled: isAuthenticated,
+  });
+  const reviewedSet = new Set(given?.rentalBookingIds ?? []);
 
   const cancelMutation = useMutation({
     mutationFn: (bookingId: string) => rentalService.cancelBooking(bookingId),
@@ -207,7 +216,32 @@ export default function MesLocationsPage() {
                           </p>
                           <p className="text-xs text-muted-foreground">FCFA total</p>
                         </div>
-                        {(booking.status === RentalBookingStatus.PENDING || 
+                        {booking.status === RentalBookingStatus.COMPLETED &&
+                          vehicle?.owner &&
+                          !reviewedSet.has(booking.id) && (
+                            <div className="flex items-center px-2">
+                              <ReviewDialog
+                                rentalBookingId={booking.id}
+                                targetName={vehicle.owner.firstName || "le propriétaire"}
+                                onReviewed={refetchGiven}
+                                trigger={
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-1"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                    }}
+                                  >
+                                    <Star className="h-4 w-4" />
+                                    Noter
+                                  </Button>
+                                }
+                              />
+                            </div>
+                          )}
+                        {(booking.status === RentalBookingStatus.PENDING ||
                           booking.status === RentalBookingStatus.CONFIRMED) && (
                           <div className="flex items-center px-2">
                             <Button

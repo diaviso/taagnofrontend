@@ -67,8 +67,24 @@ export interface User {
   isActive: boolean;
   hasPassword?: boolean;
   hasPin?: boolean;
+  ratingCount?: number;
+  ratingSum?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Review {
+  id: string;
+  rating: number;
+  comment?: string | null;
+  createdAt: string;
+  author?: Pick<User, "id" | "firstName" | "lastName" | "photoUrl">;
+}
+
+export interface UserReviews {
+  averageRating: number | null;
+  reviewCount: number;
+  reviews: Review[];
 }
 
 export interface Vehicle {

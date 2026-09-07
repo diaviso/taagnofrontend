@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { rentalService } from "@/lib/services";
+import { RatingDisplay } from "@/components/reviews/rating-display";
 import { RentalOffer } from "@/types";
 import {
   Car,
@@ -164,10 +165,7 @@ export default function RentalPage() {
                           <p className="text-sm font-medium truncate">
                             {offer.vehicle?.owner?.firstName} {offer.vehicle?.owner?.lastName}
                           </p>
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                            <span>4.9</span>
-                          </div>
+                          <RatingDisplay sum={offer.vehicle?.owner?.ratingSum} count={offer.vehicle?.owner?.ratingCount} />
                         </div>
                       </div>
 

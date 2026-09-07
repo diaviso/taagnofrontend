@@ -25,6 +25,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { rentalService } from "@/lib/services";
+import { RatingDisplay } from "@/components/reviews/rating-display";
 import { useAuth } from "@/providers";
 import { toast } from "sonner";
 import { Car, Calendar, Users, ArrowLeft, Check, X, Star, Shield, Sparkles, Clock, MapPin } from "lucide-react";
@@ -334,10 +335,8 @@ export default function OfferDetailPage() {
                       {offer.vehicle?.owner?.firstName} {offer.vehicle?.owner?.lastName}
                     </p>
                     <p className="text-sm text-muted-foreground">{offer.vehicle?.owner?.email}</p>
-                    <div className="flex items-center gap-1 mt-1">
-                      <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                      <span className="text-sm font-medium">4.9</span>
-                      <span className="text-sm text-muted-foreground">(8 avis)</span>
+                    <div className="mt-1">
+                      <RatingDisplay sum={offer.vehicle?.owner?.ratingSum} count={offer.vehicle?.owner?.ratingCount} size={16} />
                     </div>
                   </div>
                 </div>

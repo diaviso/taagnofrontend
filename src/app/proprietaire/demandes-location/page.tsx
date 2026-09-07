@@ -20,7 +20,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { rentalService } from "@/lib/services";
+import { rentalService, reviewsService } from "@/lib/services";
+import { ReviewDialog } from "@/components/reviews/review-dialog";
 import { RentalOffer, RentalBooking, RentalBookingStatus } from "@/types";
 import { toast } from "sonner";
 import {
@@ -38,6 +39,7 @@ import {
   Users,
   Wallet,
   ArrowRight,
+  Star,
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -51,6 +53,12 @@ export default function ProprietaireDemandesLocationPage() {
     queryKey: ["rental", "offers", "mine"],
     queryFn: rentalService.getMyOffers,
   });
+
+  const { data: given, refetch: refetchGiven } = useQuery({
+    queryKey: ["reviews", "given"],
+    queryFn: reviewsService.getGiven,
+  });
+  const reviewedSet = new Set(given?.rentalBookingIds ?? []);
 
   const acceptMutation = useMutation({
     mutationFn: (bookingId: string) => rentalService.acceptBooking(bookingId),
@@ -299,6 +307,22 @@ export default function ProprietaireDemandesLocationPage() {
                         <StatusIcon className="h-3 w-3" />
                         {statusConfig.label}
                       </Badge>
+
+                      {booking.status === RentalBookingStatus.COMPLETED &&
+                        booking.renter &&
+                        !reviewedSet.has(booking.id) && (
+                          <ReviewDialog
+                            rentalBookingId={booking.id}
+                            targetName={booking.renter.firstName || "le locataire"}
+                            onReviewed={refetchGiven}
+                            trigger={
+                              <Button size="sm" variant="outline" className="gap-1.5">
+                                <Star className="h-4 w-4" />
+                                Noter
+                              </Button>
+                            }
+                          />
+                        )}
 
                       {isPending && (
                         <div className="flex items-center gap-2">
