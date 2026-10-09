@@ -16,7 +16,8 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { date, dayTime, fcfa, parseDay, range } from "@/lib/format";
 import { useAction } from "@/lib/queries";
-import { BOOKING_STATUS, TRIP_STATUS, VEHICLE_STATUS, fullName, realEmail, vehicleTitle } from "@/lib/types";
+import { BOOKING_STATUS, TRIP_STATUS, VEHICLE_STATUS, contactLabel, fullName, realEmail, vehicleTitle } from "@/lib/types";
+import { ContactButtons } from "@/components/booking/contact-buttons";
 
 export default function AdminUserPage() {
   const { id } = useParams<{ id: string }>();
@@ -43,7 +44,8 @@ export default function AdminUserPage() {
           <Card className="flex flex-col items-center p-6 text-center">
             <Avatar user={u} size={88} />
             <h1 className="mt-3 text-[22px] font-extrabold tracking-tight text-ink">{fullName(u)}</h1>
-            <p className="text-[13.5px] text-muted">{realEmail(u) ?? "Compte par téléphone"}</p>
+            <p className="text-[13.5px] font-semibold text-ink-soft">{contactLabel(u)}</p>
+            {realEmail(u) && u.phone && <p className="text-[12.5px] text-muted">{realEmail(u)}</p>}
             <div className="mt-3 flex flex-wrap justify-center gap-2">
               {admin && (
                 <Badge tone="brand" icon={<ShieldCheck />}>
@@ -53,10 +55,14 @@ export default function AdminUserPage() {
               <Badge tone={u.isActive === false ? "danger" : "success"} dot>
                 {u.isActive === false ? "Désactivé" : "Actif"}
               </Badge>
+              {u.phoneVerified && <Badge tone="info">Numéro vérifié</Badge>}
             </div>
+            {u.bio && <p className="mt-3 rounded-[14px] bg-surface-alt px-4 py-2.5 text-[13.5px] text-ink-soft">« {u.bio} »</p>}
+            {u.phone && <ContactButtons className="mt-4 w-full" compact phone={u.phone} name={fullName(u)} />}
           </Card>
           <Card className="p-5">
             <InfoRow label="Inscrit le" value={date(u.createdAt)} />
+            <InfoRow label="Note" value={u.ratingCount ? `${((u.ratingSum ?? 0) / u.ratingCount).toFixed(1).replace(".", ",")} / 5 (${u.ratingCount} avis)` : "Pas encore d’avis"} />
             <InfoRow label="Véhicules" value={String(u._count?.vehicles ?? 0)} />
             <InfoRow label="Trajets publiés" value={String(u._count?.carpoolTripsAsDriver ?? 0)} />
             <InfoRow label="Places réservées" value={String(u._count?.carpoolReservations ?? 0)} />

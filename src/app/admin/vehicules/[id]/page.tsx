@@ -19,7 +19,8 @@ import { date } from "@/lib/format";
 import { cdn } from "@/lib/images";
 import { usageLabel } from "@/lib/pro";
 import { useAction } from "@/lib/queries";
-import { DOCUMENT_STATUS, DOCUMENT_TYPES, VEHICLE_STATUS, fullName, orderedPhotos, realEmail, vehicleTitle, vehicleTitleYear } from "@/lib/types";
+import { DOCUMENT_STATUS, DOCUMENT_TYPES, VEHICLE_STATUS, contactLabel, fullName, orderedPhotos, vehicleTitle, vehicleTitleYear } from "@/lib/types";
+import { ContactButtons } from "@/components/booking/contact-buttons";
 
 const REASONS = ["Documents illisibles", "Assurance expirée", "Carte grise manquante", "Visite technique manquante", "Photos du véhicule insuffisantes", "Informations incohérentes avec la carte grise"];
 
@@ -120,9 +121,18 @@ export default function AdminVehiclePage() {
               <Avatar user={v.owner} size={44} />
               <div className="min-w-0">
                 <p className="truncate text-[15px] font-extrabold text-ink">{fullName(v.owner)}</p>
-                <p className="truncate text-[12.5px] text-muted">{realEmail(v.owner) ?? "Compte par téléphone"}</p>
+                <p className="truncate text-[12.5px] text-muted">{contactLabel(v.owner)}</p>
               </div>
             </Link>
+            {v.owner?.phone && (
+              <ContactButtons
+                className="mt-3"
+                compact
+                phone={v.owner.phone}
+                name={fullName(v.owner)}
+                message={`Bonjour ${v.owner.firstName ?? ""}, c’est l’équipe Taagno au sujet de votre véhicule ${vehicleTitle(v)}.`}
+              />
+            )}
           </Card>
           <Card className="p-5">
             <InfoRow label="Ajouté le" value={date(v.createdAt)} />
