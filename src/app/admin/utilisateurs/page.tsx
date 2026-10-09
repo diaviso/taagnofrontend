@@ -12,7 +12,7 @@ import { EmptyState, Skeleton } from "@/components/ui/misc";
 import { useAdminUsers } from "@/lib/admin";
 import { useDebounced } from "@/lib/hooks";
 import { date } from "@/lib/format";
-import { fullName, realEmail } from "@/lib/types";
+import { contactLabel, fullName } from "@/lib/types";
 
 export default function AdminUsersPage() {
   const [search, setSearch] = useState("");
@@ -23,7 +23,7 @@ export default function AdminUsersPage() {
     <div>
       <ProPageHeader title="Utilisateurs" subtitle={data ? `${data.length} compte${data.length > 1 ? "s" : ""}${debounced ? " trouvés" : ""}` : undefined} />
       <div className="max-w-md">
-        <Input icon={<Search />} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher par nom ou e-mail" />
+        <Input icon={<Search />} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Nom, e-mail ou numéro (77 123 45 67)" />
       </div>
       <div className={`mt-6 transition-opacity ${isFetching && !isPending ? "opacity-60" : ""}`}>
         {isPending ? (
@@ -51,7 +51,7 @@ export default function AdminUsersPage() {
                       {u.isActive === false && <Badge tone="danger">Désactivé</Badge>}
                     </div>
                     <p className="truncate text-[12.5px] text-muted">
-                      {realEmail(u) ?? "Compte par téléphone"} · inscrit le {date(u.createdAt)}
+                      {contactLabel(u)} · inscrit le {date(u.createdAt)}
                     </p>
                   </div>
                   <div className="hidden gap-4 text-center text-[12px] text-muted md:flex">

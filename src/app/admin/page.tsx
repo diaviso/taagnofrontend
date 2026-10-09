@@ -8,7 +8,7 @@ import { StatusBadge } from "@/components/ui/badge";
 import { Card, Skeleton } from "@/components/ui/misc";
 import { useAdminStats } from "@/lib/admin";
 import { relative } from "@/lib/format";
-import { VEHICLE_STATUS, fullName, realEmail, vehicleTitle } from "@/lib/types";
+import { VEHICLE_STATUS, contactLabel, fullName, vehicleTitle } from "@/lib/types";
 
 export default function AdminHome() {
   const { data, isPending } = useAdminStats();
@@ -75,7 +75,7 @@ export default function AdminHome() {
                   <Avatar user={u} size={40} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[14.5px] font-bold text-ink">{fullName(u)}</p>
-                    <p className="truncate text-[12.5px] text-muted">{realEmail(u) ?? "Compte par téléphone"}</p>
+                    <p className="truncate text-[12.5px] text-muted">{contactLabel(u)}</p>
                   </div>
                   <span className="text-[12px] text-faint">{u.createdAt ? relative(u.createdAt) : ""}</span>
                 </Link>

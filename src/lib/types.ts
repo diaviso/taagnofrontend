@@ -26,6 +26,13 @@ export interface User {
 export const realEmail = (u?: User | null) =>
   u?.email && !u.email.endsWith("@taagno.placeholder") ? u.email : null;
 
+/** Coordonnée affichée dans l'administration : numéro, sinon e-mail réel. */
+export function contactLabel(u?: User | null) {
+  const d = (u?.phone ?? "").replace(/\D/g, "").replace(/^221/, "");
+  if (d.length === 9) return `+221 ${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 7)} ${d.slice(7)}`;
+  return realEmail(u) ?? u?.phone ?? "—";
+}
+
 export function fullName(u?: User | null) {
   const name = [u?.firstName, u?.lastName].filter((s) => s && s.trim()).join(" ");
   return name || "Utilisateur Taagno";
