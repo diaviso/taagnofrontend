@@ -1,39 +1,58 @@
-import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "@/lib/utils"
+import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
+import type { Tone } from "@/lib/types";
 
-const badgeVariants = cva(
-  "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-  {
-    variants: {
-      variant: {
-        default:
-          "border-transparent bg-primary text-primary-foreground shadow hover:bg-primary/80",
-        secondary:
-          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        destructive:
-          "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
-        outline: "text-foreground",
-        success:
-          "border-transparent bg-green-500 text-white shadow hover:bg-green-600",
-        warning:
-          "border-transparent bg-yellow-500 text-white shadow hover:bg-yellow-600",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
-  }
-)
+const tones: Record<Tone, string> = {
+  success: "bg-success/10 text-success",
+  warning: "bg-warning/12 text-[#b46b05]",
+  danger: "bg-danger/10 text-danger",
+  info: "bg-info/10 text-[#0784bf]",
+  muted: "bg-surface-alt text-muted",
+  brand: "bg-brand-soft text-brand",
+};
 
-export interface BadgeProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof badgeVariants> {}
+const dots: Record<Tone, string> = {
+  success: "bg-success",
+  warning: "bg-warning",
+  danger: "bg-danger",
+  info: "bg-info",
+  muted: "bg-faint",
+  brand: "bg-brand",
+};
 
-function Badge({ className, variant, ...props }: BadgeProps) {
+export function Badge({
+  tone = "brand",
+  dot,
+  icon,
+  className,
+  children,
+}: {
+  tone?: Tone;
+  dot?: boolean;
+  icon?: ReactNode;
+  className?: string;
+  children: ReactNode;
+}) {
   return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props} />
-  )
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-bold [&_svg]:h-3.5 [&_svg]:w-3.5",
+        tones[tone],
+        className,
+      )}
+    >
+      {dot && <span className={cn("h-1.5 w-1.5 rounded-full", dots[tone])} />}
+      {icon}
+      {children}
+    </span>
+  );
 }
 
-export { Badge, badgeVariants }
+export function StatusBadge({ status, map }: { status: string; map: Record<string, { label: string; tone: Tone }> }) {
+  const s = map[status] ?? { label: status, tone: "muted" as Tone };
+  return (
+    <Badge tone={s.tone} dot>
+      {s.label}
+    </Badge>
+  );
+}

@@ -1,30 +1,44 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Plus_Jakarta_Sans } from "next/font/google";
+import type { ReactNode } from "react";
 import "./globals.css";
-import { Providers } from "@/providers";
-import { LayoutWrapper } from "@/components/layout";
+import { Providers } from "./providers";
+import { SITE_URL } from "@/lib/site";
 
-const inter = Inter({
-  variable: "--font-inter",
+const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
+  variable: "--font-jakarta",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Taagno - Covoiturage & Location de véhicules",
-  description: "Plateforme de covoiturage et location de véhicules entre particuliers",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Taagno — Covoiturage et location de voitures au Sénégal",
+    template: "%s · Taagno",
+  },
+  description:
+    "Trouvez un trajet en covoiturage ou louez une voiture entre particuliers partout au Sénégal. Dakar, Touba, Thiès, Saint-Louis, Mbour… Simple, sûr et moins cher.",
+  applicationName: "Taagno",
+  openGraph: {
+    type: "website",
+    locale: "fr_SN",
+    siteName: "Taagno",
+  },
+  icons: { icon: "/icon.svg" },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export const viewport: Viewport = {
+  themeColor: "#15803d",
+  width: "device-width",
+  initialScale: 1,
+};
+
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="fr" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased`}>
-        <Providers>
-          <LayoutWrapper>{children}</LayoutWrapper>
-        </Providers>
+    <html lang="fr" className={jakarta.variable}>
+      <body className="min-h-dvh font-sans">
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
