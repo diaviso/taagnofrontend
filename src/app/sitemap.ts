@@ -1,7 +1,6 @@
 import type { MetadataRoute } from "next";
 import { POPULAR_ROUTES } from "@/lib/cities";
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://taagno.sn";
+import { SITE_URL } from "@/lib/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();

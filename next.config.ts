@@ -1,12 +1,11 @@
 import type { NextConfig } from "next";
+import { API_URL } from "./src/lib/site";
 
 /**
  * API Taagno (NestJS). Le navigateur appelle toujours `/api/...` sur le site même :
- * Next relaie vers le backend, sans configuration CORS quel que soit le domaine.
- * `API_URL` remplace l'API de production (ex. `http://localhost:3008/api` en local).
+ * Next relaie vers le backend (`API_URL`, voir src/lib/site.ts), sans configuration CORS
+ * quel que soit le domaine.
  */
-const API_URL = (process.env.API_URL || "https://web-production-c7eae.up.railway.app/api").replace(/\/$/, "");
-
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
