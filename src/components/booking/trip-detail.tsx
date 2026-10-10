@@ -3,7 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ArrowLeft, Armchair, CalendarDays, Clock, Flag, HandCoins, Info, MapPin, MessageSquareQuote, Route, Ticket, Zap } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { FavoriteButton } from "@/components/cards/favorite-button";
@@ -54,7 +54,9 @@ export function TripDetail({ id, initial }: { id: string; initial: CarpoolTrip |
 function TripView({ trip }: { trip: CarpoolTrip }) {
   const { user, requireAuth } = useAuth();
   const router = useRouter();
-  const [seats, setSeats] = useState(1);
+  const params = useSearchParams();
+  // Nombre de places repris de la recherche (?places=…), dans la limite des places libres.
+  const [seats, setSeats] = useState(() => Math.max(1, Math.min(Number(params.get("places")) || 1, trip.availableSeats || 1, 6)));
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -87,7 +89,7 @@ function TripView({ trip }: { trip: CarpoolTrip }) {
   );
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-32 pt-5 sm:px-6 md:pb-12">
+    <div className="mx-auto max-w-6xl px-4 pb-2 pt-5 sm:px-6 lg:pb-12">
       <div className="flex items-center justify-between gap-3">
         <button
           type="button"
@@ -112,7 +114,7 @@ function TripView({ trip }: { trip: CarpoolTrip }) {
                   <CalendarDays className="h-3.5 w-3.5" /> {longDate(trip.departureTime)}
                 </span>
                 {!isPastTrip(trip) && trip.status === "OPEN" && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[12.5px] font-bold">
+                  <span suppressHydrationWarning className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[12.5px] font-bold">
                     <Clock className="h-3.5 w-3.5" /> Départ {countdown(trip.departureTime)}
                   </span>
                 )}
@@ -205,7 +207,7 @@ function TripView({ trip }: { trip: CarpoolTrip }) {
       </div>
 
       {/* Barre de réservation (téléphone) */}
-      <div className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-40 border-t border-line bg-white/95 px-4 py-3 backdrop-blur-xl md:bottom-0 lg:hidden">
+      <div className="sticky bottom-[calc(64px+env(safe-area-inset-bottom))] z-40 -mx-4 mt-6 border-t border-line bg-white/95 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 md:bottom-0 lg:hidden">
         <div className="mx-auto flex max-w-xl items-center gap-4">
           <div className="flex-1">
             <p className="text-[19px] font-extrabold leading-none text-ink">{fcfa(trip.pricePerSeat)}</p>

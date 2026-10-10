@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { canonicalCity } from "@/lib/cities";
 import { apiDay, day } from "@/lib/format";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -21,7 +22,7 @@ export function CreateAlertButton({ from, to, date, variant = "primary" }: { fro
     requireAuth(async () => {
       setBusy(true);
       try {
-        await api.post("/carpool/alerts", { fromCity: from.trim(), toCity: to.trim(), ...(date ? { date: apiDay(date) } : {}) });
+        await api.post("/carpool/alerts", { fromCity: canonicalCity(from), toCity: canonicalCity(to), ...(date ? { date: apiDay(date) } : {}) });
         setDone(true);
         queryClient.invalidateQueries({ queryKey: ["alerts"] });
         toast.success(`Alerte créée : ${from.trim()} → ${to.trim()}${date ? `, ${day(date).toLowerCase()}` : ""}. Vous serez prévenu.`);

@@ -13,7 +13,7 @@ import { Card, EmptyState } from "@/components/ui/misc";
 import { PageSpinner } from "@/components/ui/spinner";
 import { api } from "@/lib/api";
 import { fcfa, plural } from "@/lib/format";
-import { groupRentalRequests } from "@/lib/pro";
+import { groupRentalRequests, offerVisibility } from "@/lib/pro";
 import { useAction, useMyOffers } from "@/lib/queries";
 import { orderedPhotos, rentalOptionLabel, vehicleTitle, vehicleTitleYear } from "@/lib/types";
 
@@ -28,6 +28,7 @@ export default function ManageOfferPage() {
 
   const groups = groupRentalRequests([offer]);
   const v = offer.vehicle;
+  const visibility = offerVisibility(offer);
 
   return (
     <div>
@@ -92,8 +93,14 @@ export default function ManageOfferPage() {
             <Card className="p-5">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-[15px] font-extrabold text-ink">{offer.isActive ? "Annonce en ligne" : "Annonce en pause"}</p>
-                  <p className="text-[12.5px] text-muted">{offer.isActive ? "Visible par les voyageurs" : "Invisible dans les recherches"}</p>
+                  <p className="text-[15px] font-extrabold text-ink">{offer.isActive ? "Annonce activée" : "Annonce en pause"}</p>
+                  <p className="text-[12.5px] text-muted">
+                    {visibility.visible
+                      ? "Visible par les voyageurs"
+                      : offer.isActive
+                        ? `Invisible pour l’instant : ${visibility.reason.toLowerCase()}`
+                        : "Invisible dans les recherches"}
+                  </p>
                 </div>
                 <Switch
                   checked={offer.isActive}

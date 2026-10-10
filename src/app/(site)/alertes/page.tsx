@@ -10,6 +10,7 @@ import { DateField } from "@/components/search/date-field";
 import { Button } from "@/components/ui/button";
 import { Card, EmptyState, Skeleton } from "@/components/ui/misc";
 import { api } from "@/lib/api";
+import { canonicalCity } from "@/lib/cities";
 import { apiDay, day, parseDay } from "@/lib/format";
 import { useAction, useTripAlerts } from "@/lib/queries";
 
@@ -32,7 +33,7 @@ function Alerts() {
   const create = async (e: FormEvent) => {
     e.preventDefault();
     if (!from.trim() || !to.trim()) return;
-    const ok = await run("create", () => api.post("/carpool/alerts", { fromCity: from.trim(), toCity: to.trim(), ...(date ? { date: apiDay(date) } : {}) }), {
+    const ok = await run("create", () => api.post("/carpool/alerts", { fromCity: canonicalCity(from), toCity: canonicalCity(to), ...(date ? { date: apiDay(date) } : {}) }), {
       success: "Alerte créée. Nous vous prévenons dès qu’un trajet correspond.",
       invalidate: [["alerts"]],
     });

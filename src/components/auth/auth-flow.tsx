@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Lock, Mail, MessageSquareText, Phone, ShieldCheck, Sparkles, UserRound } from "lucide-react";
+import { ArrowLeft, ArrowRight, Lock, Mail, MessageSquareText, Phone, ShieldCheck, Sparkles, UserRound, X } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { toast } from "sonner";
 import { WheelMark } from "@/components/brand/logo";
@@ -48,8 +48,11 @@ export function AuthFlow({
   reason,
   welcome = "Bienvenue sur Taagno",
   next,
+  onClose,
 }: {
   onDone: () => void;
+  /** Fenêtre de connexion : bouton « Fermer » dans l'en-tête. */
+  onClose?: () => void;
   reason?: string;
   welcome?: string;
   /** Page où revenir après une connexion Google (par défaut : la page courante). */
@@ -375,15 +378,27 @@ export function AuthFlow({
             ) : (
               <WheelMark size={40} light animated />
             )}
-            <div className="flex gap-1.5" aria-hidden>
-              {[0, 1, 2, 3].map((i) => (
-                <motion.span
-                  key={i}
-                  animate={{ width: i <= progress ? 24 : 6, opacity: i <= progress ? 1 : 0.4 }}
-                  transition={{ type: "spring", stiffness: 380, damping: 28 }}
-                  className="h-1.5 rounded-full bg-white"
-                />
-              ))}
+            <div className="flex items-center gap-3">
+              <div className="flex gap-1.5" aria-hidden>
+                {[0, 1, 2, 3].map((i) => (
+                  <motion.span
+                    key={i}
+                    animate={{ width: i <= progress ? 24 : 6, opacity: i <= progress ? 1 : 0.4 }}
+                    transition={{ type: "spring", stiffness: 380, damping: 28 }}
+                    className="h-1.5 rounded-full bg-white"
+                  />
+                ))}
+              </div>
+              {onClose && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Fermer"
+                  className="-mr-1.5 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 transition hover:bg-white/25"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              )}
             </div>
           </div>
           <AnimatePresence mode="wait">

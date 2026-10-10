@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Counter } from "@/components/ui/misc";
+import { canonicalCity } from "@/lib/cities";
 import { apiDay } from "@/lib/format";
 import { useRecentSearches } from "@/lib/favorites";
 import { cn } from "@/lib/utils";
@@ -32,18 +33,20 @@ export function HomeSearch() {
   const submitCarpool = (e: FormEvent) => {
     e.preventDefault();
     const q = new URLSearchParams();
-    if (from.trim()) q.set("from", from.trim());
-    if (to.trim()) q.set("to", to.trim());
+    const f = canonicalCity(from);
+    const t = canonicalCity(to);
+    if (f) q.set("from", f);
+    if (t) q.set("to", t);
     if (date) q.set("date", apiDay(date));
     if (seats > 1) q.set("seats", String(seats));
-    recent.push(from, to);
+    recent.push(f, t);
     router.push(`/covoiturage${q.size ? `?${q}` : ""}`);
   };
 
   const submitRental = (e: FormEvent) => {
     e.preventDefault();
     const q = new URLSearchParams();
-    if (city.trim()) q.set("city", city.trim());
+    if (city.trim()) q.set("city", canonicalCity(city));
     if (start && end) {
       q.set("start", apiDay(start));
       q.set("end", apiDay(end));

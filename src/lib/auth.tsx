@@ -52,6 +52,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const ready = useSyncExternalStore(noopSubscribe, () => true, () => false);
   const [dialog, setDialog] = useState<AuthDialogState>({ open: false });
 
+  // Session terminée (déconnexion, jeton expiré) : les données du compte quittent le cache.
+  const [lastToken, setLastToken] = useState(token);
+  if (token !== lastToken) {
+    setLastToken(token);
+    if (lastToken && !token) queryClient.clear();
+  }
+
   const me = useQuery({
     queryKey: ["me", token],
     queryFn: () => api.get<User>("/auth/me"),

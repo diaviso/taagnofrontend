@@ -16,7 +16,8 @@ import { Card, ChipToggle, Counter, EmptyState } from "@/components/ui/misc";
 import { PageSpinner } from "@/components/ui/spinner";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { fcfa, startOfDay } from "@/lib/format";
+import { canonicalCity } from "@/lib/cities";
+import { fcfa } from "@/lib/format";
 import { canCarpool, isEditable } from "@/lib/pro";
 import { useMyTrips, useMyVehicles } from "@/lib/queries";
 import { TRIP_OPTIONS, confirmedSeats, type CarpoolTrip, type TripOption } from "@/lib/types";
@@ -86,14 +87,19 @@ function TripForm({ existing, vehicles }: { existing?: CarpoolTrip; vehicles: No
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  // Heures de Dakar (UTC toute l'année), quel que soit le fuseau de l'appareil.
   const initialDate = existing ? new Date(existing.departureTime) : null;
   const [vehicleId, setVehicleId] = useState(existing?.vehicleId ?? vehicles[0]?.id ?? "");
   const [from, setFrom] = useState(existing?.departureCity ?? "");
   const [to, setTo] = useState(existing?.arrivalCity ?? "");
   const [meeting, setMeeting] = useState(existing?.meetingPoint ?? "");
   const [dropoff, setDropoff] = useState(existing?.dropoffPoint ?? "");
-  const [date, setDate] = useState<Date | null>(initialDate ? startOfDay(initialDate) : null);
-  const [hour, setHour] = useState(initialDate ? `${String(initialDate.getHours()).padStart(2, "0")}:${String(initialDate.getMinutes()).padStart(2, "0")}` : "08:00");
+  const [date, setDate] = useState<Date | null>(
+    initialDate ? new Date(initialDate.getUTCFullYear(), initialDate.getUTCMonth(), initialDate.getUTCDate()) : null,
+  );
+  const [hour, setHour] = useState(
+    initialDate ? `${String(initialDate.getUTCHours()).padStart(2, "0")}:${String(initialDate.getUTCMinutes()).padStart(2, "0")}` : "08:00",
+  );
   const vehicle = vehicles.find((v) => v.id === vehicleId);
   // Places libres possibles : véhicule moins le conducteur, moins les places déjà confirmées.
   const maxSeats = Math.max(1, (vehicle?.numberOfSeats ?? 5) - 1 - (existing ? confirmedSeats(existing) : 0));
@@ -107,9 +113,7 @@ function TripForm({ existing, vehicles }: { existing?: CarpoolTrip; vehicles: No
   const departure = useMemo(() => {
     if (!date || !hour) return null;
     const [h, m] = hour.split(":").map(Number);
-    const d = new Date(date);
-    d.setHours(h, m, 0, 0);
-    return d;
+    return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), h, m));
   }, [date, hour]);
 
   const priceValue = Number(price.replace(/\D/g, "")) || 0;
@@ -153,8 +157,8 @@ function TripForm({ existing, vehicles }: { existing?: CarpoolTrip; vehicles: No
     setBusy(true);
     try {
       const body = {
-        departureCity: from.trim(),
-        arrivalCity: to.trim(),
+        departureCity: canonicalCity(from),
+        arrivalCity: canonicalCity(to),
         departureTime: departure!.toISOString(),
         pricePerSeat: priceValue,
         availableSeats: seats,

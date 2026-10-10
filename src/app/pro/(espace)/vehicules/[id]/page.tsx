@@ -42,13 +42,28 @@ function VehicleDetail() {
   const offer = (offers.data ?? []).find((o) => o.vehicleId === v.id);
 
   const save = async (values: VehicleValues) => {
+    // Seuls les champs modifiés partent : changer la seule ville ne renvoie pas le
+    // véhicule en vérification (règle du serveur).
+    const changes: Record<string, unknown> = {};
+    if (values.brand !== v.brand) changes.brand = values.brand;
+    if (values.model !== v.model) changes.model = values.model;
+    if (values.year !== v.year) changes.year = values.year;
+    if (values.color !== (v.color ?? "")) changes.color = values.color;
+    if (values.numberOfSeats !== v.numberOfSeats) changes.numberOfSeats = values.numberOfSeats;
+    if (values.isForCarpooling !== !!v.isForCarpooling) changes.isForCarpooling = values.isForCarpooling;
+    if (values.isForRental !== !!v.isForRental) changes.isForRental = values.isForRental;
+    if (values.city !== (v.city ?? "")) changes.city = values.city;
+    if (!Object.keys(changes).length) {
+      setEditOpen(false);
+      return;
+    }
     setSaving(true);
     try {
-      const { licensePlate: _plate, ...rest } = values;
-      void _plate;
-      await api.patch(`/vehicles/${v.id}`, rest);
+      await api.patch(`/vehicles/${v.id}`, changes);
+      queryClient.invalidateQueries({ queryKey: ["offers"] });
       await Promise.all(invalidate.map((queryKey) => queryClient.invalidateQueries({ queryKey })));
-      toast.success("Véhicule enregistré.");
+      const onlyCity = Object.keys(changes).length === 1 && "city" in changes;
+      toast.success(onlyCity || v.status !== "APPROVED" ? "Véhicule enregistré." : "Véhicule enregistré. Il repasse en vérification avant de pouvoir être publié.");
       setEditOpen(false);
     } catch (e) {
       toast.error(errorMessage(e));
@@ -129,12 +144,18 @@ function VehicleDetail() {
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Card className="p-5 sm:p-6">
           <h2 className="text-[17px] font-extrabold text-ink">Photos</h2>
-          <p className="mb-4 text-[13px] text-muted">La première photo est celle que les voyageurs voient en premier.</p>
+          <p className="mb-4 text-[13px] text-muted">
+            La première photo est celle que les voyageurs voient en premier.
+            {v.status === "APPROVED" && " Ajouter ou retirer une photo renvoie le véhicule en vérification."}
+          </p>
           <PhotoManager vehicle={v} />
         </Card>
         <Card className="p-5 sm:p-6">
           <h2 className="text-[17px] font-extrabold text-ink">Documents</h2>
-          <p className="mb-4 text-[13px] text-muted">Vérifiés par Taagno, jamais publiés. Une photo nette de chaque document suffit.</p>
+          <p className="mb-4 text-[13px] text-muted">
+            Vérifiés par Taagno, jamais publiés. Une photo nette de chaque document suffit.
+            {v.status === "APPROVED" && " Remplacer un document renvoie le véhicule en vérification."}
+          </p>
           <DocumentsSection vehicle={v} />
         </Card>
       </div>
@@ -152,7 +173,7 @@ function VehicleDetail() {
         />
       </Card>
 
-      <Modal open={editOpen} onOpenChange={setEditOpen} title="Modifier le véhicule" description="Attention : modifier ces informations renvoie le véhicule en vérification (sauf la ville)." size="lg">
+      <Modal open={editOpen} onOpenChange={setEditOpen} title="Modifier le véhicule" description={v.status === "APPROVED" ? "Changer la marque, le modèle, l’année, la couleur, les places ou les usages renvoie le véhicule en vérification. La ville seule peut changer librement." : undefined} size="lg">
         <VehicleForm initial={v} submitLabel="Enregistrer" busy={saving} onSubmit={save} lockPlate />
       </Modal>
       <ConfirmModal

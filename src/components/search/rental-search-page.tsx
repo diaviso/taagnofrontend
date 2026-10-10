@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ChipToggle, Counter, EmptyState, Segmented } from "@/components/ui/misc";
 import { Modal } from "@/components/ui/modal";
 import { apiDay, fcfa, plural, range, rentalDays, startOfDay } from "@/lib/format";
+import { canonicalCity } from "@/lib/cities";
 import { useOfferSearch } from "@/lib/queries";
 import { RENTAL_OPTIONS } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -79,7 +80,7 @@ export function RentalSearchPage() {
   const submit = (e?: FormEvent) => {
     e?.preventDefault();
     const [s, en] = dates;
-    update({ city: city.trim() || null, start: s && en ? apiDay(s) : null, end: s && en ? apiDay(en) : null });
+    update({ city: canonicalCity(city) || null, start: s && en ? apiDay(s) : null, end: s && en ? apiDay(en) : null });
   };
 
   const activeFilters = q.options.length + (q.maxPrice ? 1 : 0) + (q.minSeats ? 1 : 0);
@@ -174,7 +175,7 @@ export function RentalSearchPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {offers.map((o, i) => (
-              <OfferCard key={o.id} offer={o} index={i} days={days} />
+              <OfferCard key={o.id} offer={o} index={i} days={days} linkQuery={q.start && q.end ? `start=${apiDay(q.start)}&end=${apiDay(q.end)}` : undefined} />
             ))}
           </div>
         )}

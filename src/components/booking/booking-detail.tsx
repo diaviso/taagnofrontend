@@ -289,7 +289,7 @@ export function RentalBookingDetail({ id }: { id: string }) {
         onConfirm={async () => {
           const ok = await run("cancel", () => api.patch(`/rental/bookings/${b.id}/cancel`), {
             success: "Location annulée.",
-            invalidate: [["bookings"]],
+            invalidate: [["bookings"], ["offer", offer?.id ?? ""]],
           });
           if (ok !== undefined) setCancelOpen(false);
         }}

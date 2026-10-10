@@ -46,8 +46,8 @@ export function AccountPanel({ links, space }: { links: AccountLink[]; space: "s
 
   const onPhoto = async (file?: File) => {
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      toast.error("Choisissez une image (JPG ou PNG).");
+    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+      toast.error("Choisissez une photo JPG, PNG ou WebP.");
       return;
     }
     if (file.size > 8 * 1024 * 1024) {
@@ -111,7 +111,7 @@ export function AccountPanel({ links, space }: { links: AccountLink[]; space: "s
               >
                 {uploading ? <Spinner className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
               </button>
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => onPhoto(e.target.files?.[0])} />
+              <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => onPhoto(e.target.files?.[0])} />
             </div>
             <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
               Modifier le profil
@@ -201,7 +201,7 @@ export function AccountPanel({ links, space }: { links: AccountLink[]; space: "s
             <KeyRound className="h-5 w-5" />
           </span>
           <span className="flex-1">
-            <span className="block text-[15px] font-bold text-ink">Changer mon code PIN</span>
+            <span className="block text-[15px] font-bold text-ink">{user.hasPin ? "Changer mon code PIN" : "Créer mon code PIN"}</span>
             <span className="block text-[12.5px] text-muted">Le même code sert sur le site et dans les applications</span>
           </span>
           <ChevronRight className="h-5 w-5 text-faint" />
@@ -228,7 +228,7 @@ export function AccountPanel({ links, space }: { links: AccountLink[]; space: "s
       </Card>
 
       <EditProfileModal open={editOpen} onOpenChange={setEditOpen} user={user} onSaved={refresh} />
-      <ChangePinModal open={pinOpen} onOpenChange={setPinOpen} />
+      <ChangePinModal open={pinOpen} onOpenChange={setPinOpen} onSaved={refresh} />
       <ConfirmModal
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
@@ -244,6 +244,7 @@ export function AccountPanel({ links, space }: { links: AccountLink[]; space: "s
 }
 
 function EditProfileModal({ open, onOpenChange, user, onSaved }: { open: boolean; onOpenChange: (v: boolean) => void; user: User; onSaved: () => Promise<unknown> }) {
+  const queryClient = useQueryClient();
   const [firstName, setFirstName] = useState(user.firstName ?? "");
   const [lastName, setLastName] = useState(user.lastName ?? "");
   const [bio, setBio] = useState(user.bio ?? "");
@@ -267,6 +268,7 @@ function EditProfileModal({ open, onOpenChange, user, onSaved }: { open: boolean
     try {
       await api.patch("/users/me/profile", { firstName: firstName.trim(), lastName: lastName.trim(), bio: bio.trim() });
       await onSaved();
+      queryClient.invalidateQueries({ queryKey: ["profile", user.id] });
       toast.success("Profil enregistré.");
       onOpenChange(false);
     } catch (e) {
@@ -300,7 +302,7 @@ function EditProfileModal({ open, onOpenChange, user, onSaved }: { open: boolean
   );
 }
 
-function ChangePinModal({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+function ChangePinModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenChange: (v: boolean) => void; onSaved: () => Promise<unknown> }) {
   const [step, setStep] = useState<"new" | "confirm">("new");
   const [first, setFirst] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -337,7 +339,8 @@ function ChangePinModal({ open, onOpenChange }: { open: boolean; onOpenChange: (
     setBusy(true);
     try {
       await api.post("/users/me/pin", { pin });
-      toast.success("Nouveau code PIN enregistré.");
+      await onSaved();
+      toast.success("Code PIN enregistré.");
       onOpenChange(false);
       reset();
     } catch (e) {

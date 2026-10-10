@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ChipToggle, Counter, EmptyState, Segmented } from "@/components/ui/misc";
 import { Modal } from "@/components/ui/modal";
 import { apiDay, day, fcfa, plural, startOfDay } from "@/lib/format";
+import { canonicalCity } from "@/lib/cities";
 import { useRecentSearches } from "@/lib/favorites";
 import { useTripSearch } from "@/lib/queries";
 import { TRIP_OPTIONS, type CarpoolTrip } from "@/lib/types";
@@ -76,8 +77,12 @@ export function TripSearchPage() {
 
   const submit = (e?: FormEvent) => {
     e?.preventDefault();
-    recent.push(from, to);
-    update({ from: from.trim() || null, to: to.trim() || null, date: date ? apiDay(date) : null, seats: seats > 1 ? String(seats) : null });
+    const f = canonicalCity(from);
+    const t = canonicalCity(to);
+    setFrom(f);
+    setTo(t);
+    recent.push(f, t);
+    update({ from: f || null, to: t || null, date: date ? apiDay(date) : null, seats: seats > 1 ? String(seats) : null });
   };
 
   const trips = useMemo(() => {
@@ -92,7 +97,8 @@ export function TripSearchPage() {
     if (sort === "price" || q.date) return [{ label: null as string | null, trips }];
     const map = new Map<string, CarpoolTrip[]>();
     for (const t of trips) {
-      const key = apiDay(new Date(t.departureTime));
+      // Jour de Dakar (UTC) : le même que celui affiché.
+      const key = t.departureTime.slice(0, 10);
       map.set(key, [...(map.get(key) ?? []), t]);
     }
     return [...map.values()].map((list) => ({ label: day(list[0].departureTime), trips: list }));
@@ -205,7 +211,7 @@ export function TripSearchPage() {
               }
               action={
                 <div className="flex flex-wrap justify-center gap-2">
-                  <CreateAlertButton from={q.from} to={q.to} date={q.date} />
+                  <CreateAlertButton key={`${q.from}|${q.to}|${q.date ? apiDay(q.date) : ""}`} from={q.from} to={q.to} date={q.date} />
                   {(q.date || activeFilters > 0) && (
                     <Button variant="outline" onClick={() => update({ date: null, options: [], maxPrice: null })}>
                       Toutes les dates, sans filtre
@@ -227,7 +233,7 @@ export function TripSearchPage() {
                 )}
                 <div className="grid gap-4 md:grid-cols-2">
                   {g.trips.map((t, i) => (
-                    <TripCard key={t.id} trip={t} index={i} showDay={!g.label} />
+                    <TripCard key={t.id} trip={t} index={i} showDay={!g.label} linkQuery={q.seats > 1 ? `places=${q.seats}` : undefined} />
                   ))}
                 </div>
               </section>
@@ -235,7 +241,7 @@ export function TripSearchPage() {
             {q.from && q.to && (
               <div className="flex flex-col items-center gap-3 rounded-[22px] bg-brand-soft/60 px-6 py-6 text-center sm:flex-row sm:text-left">
                 <p className="flex-1 text-[14.5px] font-semibold text-ink">Vous ne trouvez pas l’horaire idéal ? Soyez prévenu des prochains trajets {q.from} → {q.to}.</p>
-                <CreateAlertButton from={q.from} to={q.to} date={q.date} variant="soft" />
+                <CreateAlertButton key={`${q.from}|${q.to}|${q.date ? apiDay(q.date) : ""}-b`} from={q.from} to={q.to} date={q.date} variant="soft" />
               </div>
             )}
           </div>

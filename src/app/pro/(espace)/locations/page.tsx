@@ -9,6 +9,7 @@ import { LinkButton } from "@/components/ui/button";
 import { EmptyState, Skeleton } from "@/components/ui/misc";
 import { fcfa, plural } from "@/lib/format";
 import { cdn } from "@/lib/images";
+import { offerVisibility } from "@/lib/pro";
 import { useMyOffers } from "@/lib/queries";
 import { coverUrl, pendingCount, vehicleTitleYear } from "@/lib/types";
 
@@ -68,7 +69,14 @@ export default function OffersPage() {
                       {fcfa(o.pricePerDay)} <span className="text-[12.5px] font-semibold text-muted">/ jour</span>
                     </p>
                     <div className="mt-2.5 flex flex-wrap gap-1.5">
-                      {o.isActive ? <Badge tone="success" dot>En ligne</Badge> : <Badge tone="muted" dot>En pause</Badge>}
+                      {(() => {
+                        const vis = offerVisibility(o);
+                        return (
+                          <Badge tone={vis.visible ? "success" : o.isActive ? "warning" : "muted"} dot>
+                            {vis.reason}
+                          </Badge>
+                        );
+                      })()}
                       {pending > 0 && <Badge tone="danger">{plural(pending, "demande")}</Badge>}
                       {confirmed > 0 && <Badge tone="info">{plural(confirmed, "location")} confirmée{confirmed > 1 ? "s" : ""}</Badge>}
                     </div>
