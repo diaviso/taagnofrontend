@@ -3,8 +3,12 @@
 import { useState } from "react";
 import { Spinner } from "@/components/ui/spinner";
 
-/** Adresse de connexion Google du backend (variable Vercel de l'ancien site, sinon le relais /api). */
-const GOOGLE_LOGIN_URL = process.env.NEXT_PUBLIC_GOOGLE_LOGIN_URL || "/api/auth/google";
+/**
+ * Adresse de connexion Google du backend (variable Vercel de l'ancien site, sinon le relais
+ * /api). Si la variable désigne l'adresse de retour (`…/google/callback`), on repart de
+ * l'adresse de départ `…/google`.
+ */
+const GOOGLE_LOGIN_URL = (process.env.NEXT_PUBLIC_GOOGLE_LOGIN_URL || "/api/auth/google").replace(/\/callback\/?$/, "");
 
 /** Page où revenir après Google (le backend renvoie toujours vers /login). */
 export const NEXT_KEY = "taagno.next";
