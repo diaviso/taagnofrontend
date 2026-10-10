@@ -58,10 +58,14 @@ export const userRating = (u?: User | null) =>
 
 export const isAdmin = (u?: User | null) => u?.role === "ADMIN";
 
-const hasName = (u: User) => !!u.firstName?.trim() && !!u.lastName?.trim();
+export const hasName = (u: User) => !!u.firstName?.trim() && !!u.lastName?.trim();
 
-/** Profil complet : numéro vérifié, code PIN et nom. Sinon on termine l'inscription. */
-export const isProfileComplete = (u: User) => isAdmin(u) || (!!u.phoneVerified && !!u.hasPin && hasName(u));
+/**
+ * Profil complet : nom et numéro vérifié, plus le code PIN pour les comptes créés par
+ * téléphone (facultatif pour les comptes Google ou e-mail). Sinon on termine l'inscription.
+ */
+export const isProfileComplete = (u: User) =>
+  isAdmin(u) || (hasName(u) && !!u.phoneVerified && (!!u.hasPin || !!realEmail(u)));
 
 // ---------------------------------------------------------------------------
 // Statuts (libellés et couleurs)

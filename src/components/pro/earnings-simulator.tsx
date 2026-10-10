@@ -1,8 +1,8 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { KeyRound, Route } from "lucide-react";
 import { useState } from "react";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Segmented } from "@/components/ui/misc";
 import { fcfa } from "@/lib/format";
 
@@ -69,9 +69,9 @@ export function EarningsSimulator() {
         <div className="dot-grid absolute inset-0 opacity-50" />
         <div className="relative">
           <p className="text-[14px] font-bold text-white/85">Vous pourriez gagner environ</p>
-          <motion.p key={total} initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="mt-2 text-[40px] font-extrabold leading-none tracking-tight sm:text-[46px]">
-            {fcfa(total)}
-          </motion.p>
+          <p className="mt-2 text-[40px] font-extrabold leading-none tracking-tight sm:text-[46px]">
+            <AnimatedNumber value={total} format={fcfa} duration={0.6} />
+          </p>
           <p className="mt-1 text-[14px] font-semibold text-white/85">par mois, sans commission</p>
           <p className="mt-6 text-[12.5px] leading-relaxed text-white/70">
             Estimation indicative : vous fixez vos prix et vous êtes payé directement par vos passagers ou vos locataires.

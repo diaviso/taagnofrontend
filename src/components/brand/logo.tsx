@@ -63,8 +63,13 @@ export function Logo({
   className?: string;
 }) {
   return (
-    <span className={cn("inline-flex items-center", className)} style={{ gap: size * 0.26 }}>
-      <WheelMark size={size} light={light} animated={animated} />
+    <span className={cn("group/logo inline-flex items-center", className)} style={{ gap: size * 0.26 }}>
+      <WheelMark
+        size={size}
+        light={light}
+        animated={animated}
+        className="transition-transform duration-700 ease-out group-hover/logo:rotate-[360deg]"
+      />
       <span
         className="font-black leading-none tracking-[-0.045em]"
         style={{ fontSize: size * 0.62, color: light ? "#fff" : "var(--brand-word)" }}

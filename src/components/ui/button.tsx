@@ -13,13 +13,13 @@ const base =
   "active:scale-[0.97] disabled:pointer-events-none disabled:opacity-55";
 
 const variants: Record<ButtonVariant, string> = {
-  primary: "bg-brand-gradient text-white shadow-glow hover:brightness-110 hover:shadow-lg",
+  primary: "btn-sheen overflow-hidden bg-brand-gradient text-white shadow-glow hover:-translate-y-px hover:brightness-110 hover:shadow-lg",
   solid: "bg-brand text-white hover:bg-brand-dark",
   soft: "bg-brand-soft text-brand hover:brightness-95",
   outline: "border border-line bg-white text-ink hover:border-brand/40 hover:bg-brand-soft/40",
   ghost: "text-ink-soft hover:bg-surface-alt hover:text-ink",
   danger: "bg-danger/10 text-danger hover:bg-danger hover:text-white",
-  white: "bg-white text-brand-dark shadow-soft hover:bg-white/90",
+  white: "btn-sheen overflow-hidden bg-white text-brand-dark shadow-soft hover:-translate-y-px hover:bg-white/90",
   dark: "bg-ink text-white hover:bg-ink-soft",
 };
 

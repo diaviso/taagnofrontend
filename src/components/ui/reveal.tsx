@@ -40,3 +40,17 @@ export function Reveal({
     </motion.div>
   );
 }
+
+/** Trait en pointillés qui se dessine à l'apparition (liens entre étapes). */
+export function DrawLine({ className }: { className?: string }) {
+  return (
+    <motion.div
+      aria-hidden
+      className={cn("h-[2px] origin-left bg-[repeating-linear-gradient(90deg,var(--brand)_0_10px,transparent_10px_18px)] opacity-40", className)}
+      initial={{ scaleX: 0 }}
+      whileInView={{ scaleX: 1 }}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
+    />
+  );
+}

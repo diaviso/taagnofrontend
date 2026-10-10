@@ -5,6 +5,7 @@ import { MotionConfig } from "framer-motion";
 import { useState, type ReactNode } from "react";
 import { Toaster } from "sonner";
 import { AuthDialog } from "@/components/auth/auth-dialog";
+import { RouteProgress } from "@/components/layout/route-progress";
 import { ApiError } from "@/lib/api";
 import { AuthProvider } from "@/lib/auth";
 
@@ -26,6 +27,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <MotionConfig reducedMotion="user">
         <AuthProvider>
+          <RouteProgress />
           {children}
           <AuthDialog />
         </AuthProvider>
