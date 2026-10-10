@@ -2,29 +2,58 @@
 
 import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { BadgeCheck, MapPin, Star } from "lucide-react";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 
-/** Mot qui change en douceur (« aujourd’hui » → « à Touba » → …). */
-export function RotatingWords({ words, interval = 2600, className }: { words: string[]; interval?: number; className?: string }) {
-  const [index, setIndex] = useState(0);
+/**
+ * Mot qui change en douceur (« aujourd’hui » → « à Touba » → …). Tous les mots sont
+ * empilés de façon invisible dans la même case : elle prend la taille du plus long,
+ * si bien que rien ne bouge autour quand le mot change.
+ */
+export function RotatingWords({
+  words,
+  interval = 2600,
+  className,
+  suffix,
+}: {
+  words: string[];
+  interval?: number;
+  className?: string;
+  /** Texte qui suit le mot et glisse avec lui (ex. « ? »). */
+  suffix?: ReactNode;
+}) {
+  // Compteur (et non index) : chaque passage a sa propre clé, même quand un mot revient.
+  const [tick, setTick] = useState(0);
   const reduce = useReducedMotion();
   useEffect(() => {
     if (reduce) return;
-    const t = setInterval(() => setIndex((i) => (i + 1) % words.length), interval);
+    // Onglet en arrière-plan : on ne change pas de mot, les animations y sont gelées.
+    const t = setInterval(() => {
+      if (!document.hidden) setTick((n) => n + 1);
+    }, interval);
     return () => clearInterval(t);
-  }, [words.length, interval, reduce]);
+  }, [interval, reduce]);
+  const word = words[tick % words.length];
+  const cell = "col-start-1 row-start-1 whitespace-nowrap";
   return (
-    <span className="relative inline-flex overflow-hidden align-bottom">
-      <AnimatePresence mode="wait" initial={false}>
+    <span className="relative inline-grid overflow-hidden align-bottom">
+      {words.map((w) => (
+        <span key={w} aria-hidden className={cn(cell, "invisible")}>
+          <span className={className}>{w}</span>
+          {suffix}
+        </span>
+      ))}
+      <AnimatePresence initial={false}>
         <motion.span
-          key={words[index]}
-          className={className}
+          key={tick}
+          className={cell}
           initial={{ y: "80%", opacity: 0, filter: "blur(6px)" }}
           animate={{ y: "0%", opacity: 1, filter: "blur(0px)" }}
           exit={{ y: "-80%", opacity: 0, filter: "blur(6px)" }}
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
         >
-          {words[index]}
+          <span className={className}>{word}</span>
+          {suffix}
         </motion.span>
       </AnimatePresence>
     </span>
