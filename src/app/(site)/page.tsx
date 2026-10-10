@@ -25,12 +25,13 @@ export default function HomePage() {
           <Reveal immediate delay={0.06}>
             <h1 className="mt-5 max-w-3xl text-[38px] font-extrabold leading-[1.05] tracking-[-0.03em] sm:text-[54px] lg:text-[62px]">
               Où allez-vous{" "}
-              <span className="whitespace-nowrap">
+              {/* La destination a toujours sa propre ligne : le titre garde la même hauteur. */}
+              <span className="block">
                 <RotatingWords
-                  className="inline-block text-[#ffd27a]"
+                  className="text-[#ffd27a]"
+                  suffix={"\u00a0?"}
                   words={["aujourd’hui", "à Touba", "à Saint-Louis", "à Mbour", "à Thiès", "à Ziguinchor"]}
                 />
-                &nbsp;?
               </span>
             </h1>
           </Reveal>
