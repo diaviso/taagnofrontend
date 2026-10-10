@@ -6,6 +6,18 @@ import { useLocalStorage } from "./hooks";
 export const tripKey = (id: string) => `trip:${id}`;
 export const offerKey = (id: string) => `offer:${id}`;
 
+/** Efface favoris et dernières recherches de cet appareil (suppression du compte, comme dans les apps). */
+export function clearLocalData() {
+  for (const key of ["taagno.favorites", "taagno.recentSearches"]) {
+    try {
+      window.localStorage.removeItem(key);
+    } catch {
+      // stockage indisponible
+    }
+    window.dispatchEvent(new CustomEvent("taagno:storage", { detail: key }));
+  }
+}
+
 export function useFavorites() {
   const [list, setList] = useLocalStorage<string[]>("taagno.favorites", []);
   const has = (key: string) => list.includes(key);

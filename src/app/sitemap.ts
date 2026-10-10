@@ -4,7 +4,7 @@ import { SITE_URL } from "@/lib/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
-  const pages = ["", "/covoiturage", "/location", "/pro", "/aide", "/conditions", "/confidentialite"].map((path) => ({
+  const pages = ["", "/covoiturage", "/location", "/pro", "/aide", "/conditions", "/confidentialite", "/suppression-compte"].map((path) => ({
     url: `${SITE_URL}${path}`,
     lastModified: now,
     changeFrequency: path === "" || path === "/covoiturage" || path === "/location" ? ("daily" as const) : ("monthly" as const),

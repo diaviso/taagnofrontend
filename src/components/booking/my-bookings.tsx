@@ -1,18 +1,19 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CalendarRange, Car, ChevronRight, KeyRound, MapPin, Route, Star } from "lucide-react";
+import { CalendarRange, Car, ChevronRight, KeyRound, MapPin, Route, Star, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, type ReactNode } from "react";
 import { Avatar } from "@/components/ui/avatar";
-import { StatusBadge } from "@/components/ui/badge";
+import { Badge, StatusBadge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
 import { EmptyState, Segmented, Skeleton } from "@/components/ui/misc";
 import { day, fcfa, parseDay, plural, range, startOfDay, time } from "@/lib/format";
 import { cdn } from "@/lib/images";
 import { useGivenReviews, useMyBookings, useMyReservations } from "@/lib/queries";
-import { BOOKING_STATUS, coverUrl, isActiveBooking, shortName, vehicleTitle, type CarpoolReservation, type RentalBooking } from "@/lib/types";
+import { BOOKING_STATUS, coverUrl, isActiveBooking, rentalCancellation, shortName, tripCancellation, vehicleTitle, type CarpoolReservation, type RentalBooking } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { ContactButtons } from "./contact-buttons";
 
 type Tab = "trajets" | "locations";
@@ -128,6 +129,7 @@ function TripBookingCard({ r, index, canReview }: { r: CarpoolReservation; index
   const t = r.trip;
   if (!t) return null;
   const confirmed = r.status === "CONFIRMED";
+  const notice = tripCancellation(r);
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -152,6 +154,7 @@ function TripBookingCard({ r, index, canReview }: { r: CarpoolReservation; index
           </div>
           <StatusBadge status={r.status} map={BOOKING_STATUS} />
         </div>
+        {notice && <p className={cn("mt-3 text-[13px] font-semibold", r.cancelledBy === "PASSENGER" || r.cancelledBy === "SYSTEM" ? "text-muted" : "text-danger")}>{notice.title}</p>}
         <div className="mt-4 flex items-center gap-3 border-t border-dashed border-line pt-3.5">
           <Avatar user={t.driver} size={34} />
           <div className="min-w-0 flex-1">
@@ -188,6 +191,7 @@ function RentalBookingCard({ b, index, canReview }: { b: RentalBooking; index: n
   const photo = cdn(coverUrl(v), 320);
   const start = parseDay(b.startDate);
   const end = parseDay(b.endDate);
+  const notice = rentalCancellation(b);
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}>
       <Link href={`/reservations/location/${b.id}`} className="group flex gap-4 rounded-[22px] border border-line/70 bg-white p-3.5 shadow-card transition hover:shadow-lift">
@@ -209,6 +213,14 @@ function RentalBookingCard({ b, index, canReview }: { b: RentalBooking; index: n
           <p className="mt-1 flex items-center gap-1.5 text-[13px] font-semibold text-ink-soft">
             <CalendarRange className="h-3.5 w-3.5 text-brand" /> {range(start, end)}
           </p>
+          {b.withDriver && (
+            <div className="mt-1.5">
+              <Badge tone="warning" icon={<UserRound />}>
+                Avec chauffeur
+              </Badge>
+            </div>
+          )}
+          {notice && <p className={cn("mt-1.5 text-[12.5px] font-semibold", b.cancelledBy === "OWNER" ? "text-danger" : "text-muted")}>{notice.title}</p>}
           <div className="mt-2 flex items-center justify-between gap-2">
             <p className="text-[14px] font-extrabold text-ink">{fcfa(b.totalPrice)}</p>
             {canReview && (

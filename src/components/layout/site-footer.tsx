@@ -31,6 +31,7 @@ const COLUMNS: { title: string; links: [string, string][] }[] = [
       ["/aide", "Questions fréquentes"],
       ["/conditions", "Conditions d’utilisation"],
       ["/confidentialite", "Confidentialité"],
+      ["/suppression-compte", "Suppression du compte"],
     ],
   },
 ];

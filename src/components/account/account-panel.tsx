@@ -15,12 +15,15 @@ import { Card } from "@/components/ui/misc";
 import { ConfirmModal, Modal } from "@/components/ui/modal";
 import { RatingPill, Stars } from "@/components/ui/rating";
 import { Spinner } from "@/components/ui/spinner";
-import { api, errorMessage } from "@/lib/api";
+import { api, ApiError, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { clearLocalData } from "@/lib/favorites";
 import { memberSince, relative } from "@/lib/format";
 import { isWeakPin, prettyPhone } from "@/lib/phone";
 import { uploadImage, useUserReviews } from "@/lib/queries";
 import { fullName, shortName, userRating, type User } from "@/lib/types";
+
+import { ChangePhoneModal } from "./change-phone-modal";
 
 export interface AccountLink {
   href: string;
@@ -38,6 +41,8 @@ export function AccountPanel({ links, space }: { links: AccountLink[]; space: "s
   const [uploading, setUploading] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [pinOpen, setPinOpen] = useState(false);
+  const [phoneOpen, setPhoneOpen] = useState(false);
+  const [phoneResume, setPhoneResume] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const reviews = useUserReviews(user?.id);
@@ -84,6 +89,7 @@ export function AccountPanel({ links, space }: { links: AccountLink[]; space: "s
       await api.delete("/users/me");
       signOut();
       queryClient.clear();
+      clearLocalData();
       toast.success("Votre compte a été supprimé. À bientôt !");
       router.push("/");
     } catch (e) {
@@ -120,9 +126,36 @@ export function AccountPanel({ links, space }: { links: AccountLink[]; space: "s
           <h1 className="mt-3 text-[24px] font-extrabold tracking-tight text-ink">{fullName(user)}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13.5px] text-muted">
             <span className="font-semibold text-ink-soft">{prettyPhone(user.phone, true)}</span>
+            <button
+              type="button"
+              onClick={() => {
+                setPhoneResume(false);
+                setPhoneOpen(true);
+              }}
+              className="font-bold text-brand hover:underline"
+            >
+              {user.phone ? "Changer de numéro" : "Ajouter un numéro"}
+            </button>
             <RatingPill value={userRating(user)} count={user.ratingCount} />
             {user.createdAt && <span>{memberSince(user.createdAt)}</span>}
           </div>
+          {user.pendingPhone && (
+            <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[14px] bg-warning/10 px-4 py-2.5 text-[13.5px] text-ink-soft">
+              <span>
+                Nouveau numéro en attente de validation : <span className="font-bold text-ink">{prettyPhone(user.pendingPhone, true)}</span>. Votre numéro actuel reste actif.
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setPhoneResume(true);
+                  setPhoneOpen(true);
+                }}
+                className="font-bold text-brand hover:underline"
+              >
+                Saisir le code
+              </button>
+            </p>
+          )}
           {user.bio ? (
             <p className="mt-3 rounded-[14px] bg-surface-alt px-4 py-3 text-[14px] leading-relaxed text-ink-soft">« {user.bio} »</p>
           ) : (
@@ -228,7 +261,8 @@ export function AccountPanel({ links, space }: { links: AccountLink[]; space: "s
       </Card>
 
       <EditProfileModal open={editOpen} onOpenChange={setEditOpen} user={user} onSaved={refresh} />
-      <ChangePinModal open={pinOpen} onOpenChange={setPinOpen} onSaved={refresh} />
+      <ChangePinModal open={pinOpen} onOpenChange={setPinOpen} hasPin={!!user.hasPin} />
+      <ChangePhoneModal open={phoneOpen} onOpenChange={setPhoneOpen} user={user} resume={phoneResume} />
       <ConfirmModal
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
@@ -238,7 +272,13 @@ export function AccountPanel({ links, space }: { links: AccountLink[]; space: "s
         danger
         loading={deleting}
         onConfirm={deleteAccount}
-      />
+      >
+        <p className="mt-3 text-[13px] text-muted">
+          <Link href="/suppression-compte" className="font-bold text-brand hover:underline">
+            Voir ce qui est supprimé
+          </Link>
+        </p>
+      </ConfirmModal>
     </div>
   );
 }
@@ -302,22 +342,42 @@ function EditProfileModal({ open, onOpenChange, user, onSaved }: { open: boolean
   );
 }
 
-function ChangePinModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenChange: (v: boolean) => void; onSaved: () => Promise<unknown> }) {
-  const [step, setStep] = useState<"new" | "confirm">("new");
+type PinStep = "current" | "new" | "confirm";
+
+/**
+ * Code PIN : « Code PIN actuel » d'abord (si le compte en a un), puis le nouveau code deux fois.
+ * Le serveur ferme les autres sessions et renvoie un nouveau jeton, que l'on enregistre.
+ */
+function ChangePinModal({ open, onOpenChange, hasPin }: { open: boolean; onOpenChange: (v: boolean) => void; hasPin: boolean }) {
+  const { adoptToken, refresh } = useAuth();
+  const [step, setStep] = useState<PinStep>(hasPin ? "current" : "new");
+  const [currentPin, setCurrentPin] = useState("");
   const [first, setFirst] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
   const [busy, setBusy] = useState(false);
 
-  const reset = () => {
-    setStep("new");
-    setFirst("");
-    setError(null);
-  };
+  // À chaque ouverture, on repart de la première étape.
+  const [lastOpen, setLastOpen] = useState(open);
+  if (open !== lastOpen) {
+    setLastOpen(open);
+    if (open) {
+      setStep(hasPin ? "current" : "new");
+      setCurrentPin("");
+      setFirst("");
+      setError(null);
+    }
+  }
 
   const fail = (msg: string) => {
     setError(msg);
     setTick((t) => t + 1);
+  };
+
+  const onCurrent = (pin: string) => {
+    setCurrentPin(pin);
+    setError(null);
+    setStep("new");
   };
 
   const onNew = (pin: string) => {
@@ -338,34 +398,51 @@ function ChangePinModal({ open, onOpenChange, onSaved }: { open: boolean; onOpen
     }
     setBusy(true);
     try {
-      await api.post("/users/me/pin", { pin });
-      await onSaved();
-      toast.success("Code PIN enregistré.");
+      const data = await api.post<{ access_token?: string; sessionsRevoked?: boolean }>("/users/me/pin", {
+        pin,
+        ...(hasPin ? { currentPin } : {}),
+      });
+      // Les autres sessions sont fermées, y compris l'ancien jeton de cet appareil.
+      if (data?.access_token) adoptToken(data.access_token);
+      await refresh();
+      const othersSignedOut = data?.sessionsRevoked ?? hasPin;
+      toast.success(othersSignedOut ? "Nouveau code PIN enregistré. Vos autres appareils devront se reconnecter." : "Code PIN enregistré.");
       onOpenChange(false);
-      reset();
     } catch (e) {
-      setStep("new");
+      const code = e instanceof ApiError ? e.code : undefined;
+      const status = e instanceof ApiError ? e.status : undefined;
+      if (code === "WRONG_CURRENT_PIN" || code === "CURRENT_PIN_REQUIRED" || status === 403) {
+        // Code actuel faux (ou trop d'essais) : retour à la première étape avec le message du serveur.
+        setCurrentPin("");
+        setStep("current");
+      } else {
+        setStep("new");
+      }
       fail(errorMessage(e));
     } finally {
       setBusy(false);
     }
   };
 
+  const titles: Record<PinStep, [string, string]> = {
+    current: ["Code PIN actuel", "Saisissez votre code actuel pour confirmer que c’est bien vous."],
+    new: ["Nouveau code PIN", "Choisissez 4 chiffres faciles à retenir pour vous, difficiles à deviner."],
+    confirm: ["Confirmez votre code", "Saisissez à nouveau les 4 chiffres."],
+  };
+
   return (
-    <Modal
-      open={open}
-      onOpenChange={(v) => {
-        onOpenChange(v);
-        if (!v) reset();
-      }}
-      title={step === "new" ? "Nouveau code PIN" : "Confirmez votre code"}
-      description={step === "new" ? "Choisissez 4 chiffres faciles à retenir pour vous, difficiles à deviner." : "Saisissez à nouveau les 4 chiffres."}
-      size="sm"
-    >
+    <Modal open={open} onOpenChange={onOpenChange} title={titles[step][0]} description={titles[step][1]} size="sm">
       <div className="flex flex-col gap-4 py-4">
-        <CodeInput key={step} length={4} obscure onComplete={step === "new" ? onNew : onConfirm} error={tick} disabled={busy} />
-        {error && <p className="text-center text-[13.5px] font-semibold text-danger">{error}</p>}
+        <CodeInput key={step} length={4} obscure onComplete={step === "current" ? onCurrent : step === "new" ? onNew : onConfirm} error={error ? tick : 0} disabled={busy} />
+        {error && (
+          <p className="text-center text-[13.5px] font-semibold text-danger" role="alert">
+            {error}
+          </p>
+        )}
         {busy && <p className="text-center text-[13px] text-muted">Enregistrement…</p>}
+        {step === "current" && (
+          <p className="text-center text-[13px] text-muted">Code oublié ? Déconnectez-vous, puis touchez « Code PIN oublié ? » sur l’écran de connexion.</p>
+        )}
       </div>
     </Modal>
   );

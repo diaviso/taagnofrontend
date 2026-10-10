@@ -52,6 +52,19 @@ export const tokenStore = {
   },
 };
 
+/** Âge d'un jeton (JWT) en millisecondes d'après son champ `iat` ; `null` s'il est illisible. */
+export function tokenAgeMs(token: string): number | null {
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(payload.length / 4) * 4, "="));
+    const iat = (JSON.parse(json) as { iat?: unknown }).iat;
+    return typeof iat === "number" && Number.isFinite(iat) ? Date.now() - iat * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
 type Query = Record<string, string | number | boolean | null | undefined | (string | number)[]>;
 
 function buildQuery(query?: Query) {

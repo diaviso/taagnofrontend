@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CalendarRange, Check, Flag, Star, X } from "lucide-react";
+import { Ban, CalendarRange, Check, Flag, Star, UserMinus, UserRound, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { ContactButtons } from "@/components/booking/contact-buttons";
@@ -15,9 +15,14 @@ import { api } from "@/lib/api";
 import { day, fcfa, parseDay, plural, range, rentalDays, startOfDay, time } from "@/lib/format";
 import { isStaleRentalRequest, isStaleTripRequest, type RentalRequest, type TripRequest } from "@/lib/pro";
 import { useAction, useGivenReviews } from "@/lib/queries";
-import { BOOKING_STATUS, shortName, userRating, vehicleTitle } from "@/lib/types";
+import { BOOKING_STATUS, isPastTrip, shortName, userRating, vehicleTitle } from "@/lib/types";
+import { ReasonModal } from "./reason-modal";
 
 const INVALIDATE = [["trips"], ["offers"], ["unread"], ["notifications"]];
+/** Après avoir retiré un passager : trajets, fiche publique du trajet, réservations du voyageur, notifications. */
+const invalidateTrip = (tripId: string) => [...INVALIDATE, ["trip", tripId], ["reservations"]];
+/** Après avoir annulé une location : annonces, fiche publique, locations du voyageur, notifications. */
+const invalidateOffer = (offerId: string) => [...INVALIDATE, ["offer", offerId], ["bookings"]];
 
 /** Demande de place sur un trajet. */
 export function TripRequestCard({ request, showTrip = true, index = 0 }: { request: TripRequest; showTrip?: boolean; index?: number }) {
@@ -26,8 +31,21 @@ export function TripRequestCard({ request, showTrip = true, index = 0 }: { reque
   const { run, busy } = useAction();
   const given = useGivenReviews();
   const [rejectOpen, setRejectOpen] = useState(false);
+  const [removeOpen, setRemoveOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const canReview = r.status === "COMPLETED" && !!given.data && !given.data.carpoolReservationIds.includes(r.id);
+  // Un passager confirmé peut être retiré tant que le trajet n'est pas parti (une demande en attente se refuse).
+  const canRemove = r.status === "CONFIRMED" && (trip.status === "OPEN" || trip.status === "FULL") && !isPastTrip(trip);
+  const cancelNote =
+    r.status !== "CANCELLED"
+      ? null
+      : r.cancelledBy === "DRIVER"
+        ? "Vous avez retiré ce passager"
+        : r.cancelledBy === "PASSENGER"
+          ? "Le passager a annulé sa place"
+          : r.cancelledBy === "SYSTEM"
+            ? "Demande expirée sans réponse"
+            : null;
 
   return (
     <motion.div
@@ -94,12 +112,38 @@ export function TripRequestCard({ request, showTrip = true, index = 0 }: { reque
           message={`Bonjour ${p.firstName ?? ""}, c’est votre conducteur Taagno pour le trajet ${trip.departureCity} → ${trip.arrivalCity} (${day(trip.departureTime).toLowerCase()} à ${time(trip.departureTime)}).`}
         />
       )}
+      {canRemove && (
+        <Button variant="danger" size="sm" className="mt-3" icon={<UserMinus className="h-4 w-4" />} disabled={!!busy} onClick={() => setRemoveOpen(true)}>
+          Retirer ce passager
+        </Button>
+      )}
+      {cancelNote && (
+        <p className="mt-4 rounded-[14px] bg-surface-alt px-4 py-3 text-[13px] text-ink-soft">
+          <span className="font-bold">{cancelNote}</span>
+          {r.cancelReason?.trim() && <span className="mt-0.5 block break-words text-muted">Motif : « {r.cancelReason.trim()} »</span>}
+        </p>
+      )}
       {canReview && (
         <Button variant="soft" size="sm" className="mt-4" icon={<Star className="h-4 w-4" />} onClick={() => setReviewOpen(true)}>
           Noter ce passager
         </Button>
       )}
 
+      <ReasonModal
+        open={removeOpen}
+        onOpenChange={setRemoveOpen}
+        title="Retirer ce passager ?"
+        message={`${shortName(p)} sera prévenu·e que sa place est annulée. ${plural(r.seatsReserved, "place")} ${r.seatsReserved > 1 ? "redeviennent" : "redevient"} disponible${r.seatsReserved > 1 ? "s" : ""} sur votre trajet.`}
+        confirmLabel="Retirer ce passager"
+        loading={busy === "remove"}
+        onConfirm={async (reason) => {
+          const ok = await run("remove", () => api.patch(`/carpool/reservations/${r.id}/remove`, reason ? { reason } : {}), {
+            success: `${shortName(p)} a été retiré·e du trajet.`,
+            invalidate: invalidateTrip(trip.id),
+          });
+          if (ok !== undefined) setRemoveOpen(false);
+        }}
+      />
       <ConfirmModal
         open={rejectOpen}
         onOpenChange={setRejectOpen}
@@ -126,10 +170,23 @@ export function RentalRequestCard({ request, showOffer = true, index = 0 }: { re
   const given = useGivenReviews();
   const [rejectOpen, setRejectOpen] = useState(false);
   const [completeOpen, setCompleteOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const start = parseDay(b.startDate);
   const end = parseDay(b.endDate);
   const started = start <= startOfDay(new Date());
+  // Annulable par le propriétaire tant que la location n'est pas terminée (date de retour pas passée).
+  const canCancel = b.status === "CONFIRMED" && end >= startOfDay(new Date());
+  const cancelNote =
+    b.status !== "CANCELLED"
+      ? null
+      : b.cancelledBy === "OWNER"
+        ? "Vous avez annulé cette location"
+        : b.cancelledBy === "RENTER"
+          ? "Le locataire a annulé sa demande"
+          : b.cancelledBy === "SYSTEM"
+            ? "Demande expirée sans réponse"
+            : null;
   const canReview = b.status === "COMPLETED" && !!given.data && !given.data.rentalBookingIds.includes(b.id);
   const v = offer.vehicle;
 
@@ -168,6 +225,17 @@ export function RentalRequestCard({ request, showOffer = true, index = 0 }: { re
         </span>
         <span className="font-extrabold text-ink">{fcfa(b.totalPrice)}</span>
       </div>
+      {b.withDriver && (
+        <div className="mt-2 flex items-start gap-3 rounded-[14px] border border-warning/40 bg-warning/10 px-4 py-2.5">
+          <UserRound className="mt-0.5 h-[18px] w-[18px] shrink-0 text-[#b46b05]" />
+          <div className="min-w-0 text-[13.5px]">
+            <p className="font-extrabold text-ink">Avec chauffeur</p>
+            <p className="text-ink-soft">
+              {b.driverPricePerDay ? `+ ${fcfa(b.driverPricePerDay)} par jour, déjà compté dans le total` : "Tarif du chauffeur à convenir avec le locataire"}
+            </p>
+          </div>
+        </div>
+      )}
 
       {b.status === "PENDING" && isStaleRentalRequest(request) && (
         <p className="mt-4 rounded-[14px] bg-surface-alt px-4 py-3 text-[13px] text-muted">La date de début est passée sans réponse : cette demande va expirer.</p>
@@ -193,18 +261,49 @@ export function RentalRequestCard({ request, showOffer = true, index = 0 }: { re
           {renter?.phone && (
             <ContactButtons compact phone={renter.phone} name={shortName(renter)} message={`Bonjour ${renter.firstName ?? ""}, c’est le propriétaire du véhicule ${vehicleTitle(v)} réservé sur Taagno (${range(start, end).toLowerCase()}).`} />
           )}
-          {started && (
-            <Button variant="soft" size="sm" icon={<Flag className="h-4 w-4" />} onClick={() => setCompleteOpen(true)}>
-              Véhicule rendu : terminer la location
-            </Button>
+          {(started || canCancel) && (
+            <div className="flex flex-wrap gap-2">
+              {started && (
+                <Button variant="soft" size="sm" icon={<Flag className="h-4 w-4" />} disabled={!!busy} onClick={() => setCompleteOpen(true)}>
+                  Véhicule rendu : terminer la location
+                </Button>
+              )}
+              {canCancel && (
+                <Button variant="danger" size="sm" icon={<Ban className="h-4 w-4" />} disabled={!!busy} onClick={() => setCancelOpen(true)}>
+                  Annuler la location
+                </Button>
+              )}
+            </div>
           )}
         </div>
+      )}
+      {cancelNote && (
+        <p className="mt-4 rounded-[14px] bg-surface-alt px-4 py-3 text-[13px] text-ink-soft">
+          <span className="font-bold">{cancelNote}</span>
+          {b.cancelReason?.trim() && <span className="mt-0.5 block break-words text-muted">Motif : « {b.cancelReason.trim()} »</span>}
+        </p>
       )}
       {canReview && (
         <Button variant="soft" size="sm" className="mt-4" icon={<Star className="h-4 w-4" />} onClick={() => setReviewOpen(true)}>
           Noter ce locataire
         </Button>
       )}
+
+      <ReasonModal
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
+        title="Annuler cette location ?"
+        message={`Attention : ${shortName(renter)} sera prévenu·e que sa location est annulée, et les dates redeviendront disponibles pour d’autres clients.`}
+        confirmLabel="Annuler la location"
+        loading={busy === "cancel"}
+        onConfirm={async (reason) => {
+          const ok = await run("cancel", () => api.patch(`/rental/bookings/${b.id}/cancel-by-owner`, reason ? { reason } : {}), {
+            success: "Location annulée. Le locataire est prévenu.",
+            invalidate: invalidateOffer(offer.id),
+          });
+          if (ok !== undefined) setCancelOpen(false);
+        }}
+      />
 
       <ConfirmModal
         open={rejectOpen}

@@ -12,9 +12,9 @@ export function ShareButton({ title, text, className }: { title: string; text: s
       try {
         await navigator.share({ title, text, url });
         return;
-      } catch {
-        // partage annulé : on ne fait rien
-        return;
+      } catch (e) {
+        // Partage annulé par la personne : on ne fait rien. Autre échec : on copie le lien.
+        if (e instanceof DOMException && e.name === "AbortError") return;
       }
     }
     try {
