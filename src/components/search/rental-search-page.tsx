@@ -151,7 +151,7 @@ export function RentalSearchPage() {
         </p>
       )}
 
-      <div className="mt-6">
+      <div className={cn("mt-6 transition-opacity duration-300", isFetching && !isPending && "opacity-50")}>
         {isPending ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[0, 1, 2, 3, 4, 5].map((i) => (

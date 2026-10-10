@@ -186,7 +186,7 @@ export function TripSearchPage() {
         </div>
       )}
 
-      <div className="mt-6">
+      <div className={cn("mt-6 transition-opacity duration-300", isFetching && !isPending && "opacity-50")}>
         {isPending ? (
           <div className="grid gap-4 md:grid-cols-2">
             {[0, 1, 2, 3].map((i) => (

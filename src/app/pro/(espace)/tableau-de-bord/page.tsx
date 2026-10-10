@@ -93,7 +93,7 @@ export default function DashboardPage() {
         <Kpi index={0} icon={<Inbox />} tone={pending ? "danger" : "brand"} highlight={pending > 0} label="Demandes en attente" value={pending} />
         <Kpi index={1} icon={<Route />} tone="carpool" label="Prochains départs" value={upcoming.length} />
         <Kpi index={2} icon={<Users />} tone="carpool" label="Places réservées" value={upcoming.reduce((s, x) => s + confirmedSeats(x), 0)} hint="sur vos trajets à venir" />
-        <Kpi index={3} icon={<KeyRound />} tone="rental" label="Gains estimés ce mois" value={fcfa(thisMonth.carpool + thisMonth.rental)} />
+        <Kpi index={3} icon={<KeyRound />} tone="rental" label="Gains estimés ce mois" value={thisMonth.carpool + thisMonth.rental} format={fcfa} />
       </div>
 
       {pending > 0 && (

@@ -1,10 +1,11 @@
 import { BadgeCheck, CalendarCheck, CarFront, HandCoins, KeyRound, Lock, MessageCircleHeart, Search, ShieldCheck, Sparkles, Star } from "lucide-react";
 import Link from "next/link";
 import { FeaturedOffers, UpcomingTrips } from "@/components/home/home-lists";
+import { HeroDecor, RotatingWords } from "@/components/home/hero-extras";
 import { HeroRoad } from "@/components/home/hero-road";
 import { HomeSearch } from "@/components/search/home-search";
 import { LinkButton } from "@/components/ui/button";
-import { Reveal } from "@/components/ui/reveal";
+import { DrawLine, Reveal } from "@/components/ui/reveal";
 import { POPULAR_ROUTES } from "@/lib/cities";
 
 export default function HomePage() {
@@ -23,7 +24,14 @@ export default function HomePage() {
           </Reveal>
           <Reveal immediate delay={0.06}>
             <h1 className="mt-5 max-w-3xl text-[38px] font-extrabold leading-[1.05] tracking-[-0.03em] sm:text-[54px] lg:text-[62px]">
-              Où allez-vous <span className="whitespace-nowrap"><span className="text-[#ffd27a]">aujourd’hui</span>&nbsp;?</span>
+              Où allez-vous{" "}
+              <span className="whitespace-nowrap">
+                <RotatingWords
+                  className="inline-block text-[#ffd27a]"
+                  words={["aujourd’hui", "à Touba", "à Saint-Louis", "à Mbour", "à Thiès", "à Ziguinchor"]}
+                />
+                &nbsp;?
+              </span>
             </h1>
           </Reveal>
           <Reveal immediate delay={0.12}>
@@ -49,6 +57,7 @@ export default function HomePage() {
             </div>
           </Reveal>
         </div>
+        <HeroDecor />
         <HeroRoad />
       </section>
 
@@ -82,7 +91,8 @@ export default function HomePage() {
             <h2 className="text-center text-[26px] font-extrabold tracking-tight text-ink sm:text-[32px]">Simple comme bonjour</h2>
             <p className="mx-auto mt-2 max-w-lg text-center text-[15px] text-muted">Trois étapes, et vous êtes sur la route.</p>
           </Reveal>
-          <div className="mt-10 grid gap-5 md:grid-cols-3">
+          <div className="relative mt-10 grid gap-5 md:grid-cols-3">
+            <DrawLine className="absolute left-[16%] right-[16%] top-[50px] hidden md:block" />
             {[
               { icon: Search, title: "Cherchez", text: "Indiquez votre départ, votre destination et la date. Comparez les prix, les horaires et les avis." },
               { icon: CalendarCheck, title: "Réservez", text: "Demandez vos places en un clic. Le conducteur confirme, souvent en quelques minutes." },

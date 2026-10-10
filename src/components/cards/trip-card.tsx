@@ -38,7 +38,9 @@ export function TripCard({ trip, index = 0, showDay = true }: { trip: CarpoolTri
               </div>
               <div className="flex flex-col items-center pt-[7px]">
                 <span className="h-2.5 w-2.5 rounded-full border-[2.5px] border-brand bg-white" />
-                <span className="my-1 w-[2px] flex-1 rounded bg-gradient-to-b from-brand to-brand-g3/50" />
+                <span className="relative my-1 w-[2px] flex-1 rounded bg-gradient-to-b from-brand to-brand-g3/50">
+                  <span className="absolute left-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand opacity-0 shadow-glow group-hover:animate-[travel_1.4s_ease-in-out_infinite]" />
+                </span>
                 <span className="h-2.5 w-2.5 rounded-full bg-brand" />
               </div>
               <div className="flex min-w-0 flex-1 flex-col gap-4">

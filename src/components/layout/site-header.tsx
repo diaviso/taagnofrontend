@@ -133,7 +133,9 @@ export function SiteTabBar() {
           return (
             <Link key={tab.href} href={tab.href} className="relative flex flex-col items-center gap-0.5 pb-2 pt-2.5">
               {active && <motion.span layoutId="tabbar" className="absolute top-0 h-[3px] w-10 rounded-b-full bg-brand" />}
-              <Icon className={cn("h-[22px] w-[22px] transition", active ? "text-brand" : "text-faint")} strokeWidth={active ? 2.4 : 2} />
+              <motion.span key={active ? "on" : "off"} animate={active ? { y: [0, -4, 0], scale: [1, 1.18, 1] } : undefined} transition={{ duration: 0.4 }}>
+                <Icon className={cn("h-[22px] w-[22px] transition", active ? "text-brand" : "text-faint")} strokeWidth={active ? 2.4 : 2} />
+              </motion.span>
               <span className={cn("text-[11px] font-bold", active ? "text-brand" : "text-muted")}>{tab.label}</span>
             </Link>
           );

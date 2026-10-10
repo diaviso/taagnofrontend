@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import type { ReactNode } from "react";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { fcfa, fcfaCompact, monthShort } from "@/lib/format";
 import type { MonthEarnings } from "@/lib/pro";
 import { cn } from "@/lib/utils";
@@ -23,7 +24,26 @@ export function ProPageHeader({ title, subtitle, actions, back }: { title: React
 }
 
 /** Indicateur chiffré du tableau de bord. */
-export function Kpi({ icon, label, value, hint, tone = "brand", index = 0, highlight }: { icon: ReactNode; label: string; value: ReactNode; hint?: string; tone?: "brand" | "carpool" | "rental" | "danger"; index?: number; highlight?: boolean }) {
+export function Kpi({
+  icon,
+  label,
+  value,
+  format,
+  hint,
+  tone = "brand",
+  index = 0,
+  highlight,
+}: {
+  icon: ReactNode;
+  label: string;
+  /** Un nombre défile jusqu'à sa valeur (`format` pour l'afficher, ex. en FCFA). */
+  value: ReactNode;
+  format?: (n: number) => string;
+  hint?: string;
+  tone?: "brand" | "carpool" | "rental" | "danger";
+  index?: number;
+  highlight?: boolean;
+}) {
   const colors = {
     brand: "bg-brand-soft text-brand",
     carpool: "bg-carpool/10 text-carpool",
@@ -35,10 +55,13 @@ export function Kpi({ icon, label, value, hint, tone = "brand", index = 0, highl
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.06 }}
-      className={cn("rounded-[22px] border bg-white p-5 shadow-card", highlight ? "border-danger/30 ring-4 ring-danger/5" : "border-line/70")}
+      whileHover={{ y: -3 }}
+      className={cn("rounded-[22px] border bg-white p-5 shadow-card transition-shadow hover:shadow-lift", highlight ? "border-danger/30 ring-4 ring-danger/5" : "border-line/70")}
     >
       <span className={cn("flex h-10 w-10 items-center justify-center rounded-[12px] [&_svg]:h-5 [&_svg]:w-5", colors[tone])}>{icon}</span>
-      <p className="mt-4 text-[26px] font-extrabold leading-none tracking-tight text-ink">{value}</p>
+      <p className="mt-4 text-[26px] font-extrabold leading-none tracking-tight text-ink">
+        {typeof value === "number" ? <AnimatedNumber value={value} format={format} /> : value}
+      </p>
       <p className="mt-1.5 text-[13.5px] font-semibold text-muted">{label}</p>
       {hint && <p className="mt-0.5 text-[12px] text-faint">{hint}</p>}
     </motion.div>

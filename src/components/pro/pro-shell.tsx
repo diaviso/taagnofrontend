@@ -159,14 +159,14 @@ export function ProShell({ children }: { children: ReactNode }) {
             return (
               <Link key={item.href} href={item.href} className="relative flex flex-col items-center gap-0.5 pb-2 pt-2.5">
                 {active && <motion.span layoutId="pro-tab" className="absolute top-0 h-[3px] w-10 rounded-b-full bg-brand" />}
-                <span className="relative">
+                <motion.span className="relative" key={active ? "on" : "off"} animate={active ? { y: [0, -4, 0], scale: [1, 1.18, 1] } : undefined} transition={{ duration: 0.4 }}>
                   <Icon className={cn("h-[22px] w-[22px]", active ? "text-brand" : "text-faint")} strokeWidth={active ? 2.4 : 2} />
                   {item.badge && pending.total > 0 && (
                     <span className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-extrabold text-white ring-2 ring-white">
                       {pending.total}
                     </span>
                   )}
-                </span>
+                </motion.span>
                 <span className={cn("text-[11px] font-bold", active ? "text-brand" : "text-muted")}>{item.short}</span>
               </Link>
             );
@@ -174,6 +174,7 @@ export function ProShell({ children }: { children: ReactNode }) {
         </div>
       </nav>
       <div className="fixed bottom-[calc(76px+env(safe-area-inset-bottom))] right-4 z-40 sm:hidden">
+        <span className="pointer-events-none absolute inset-0 animate-pulse-ring rounded-full bg-brand/30" />
         <PublishMenu compact />
       </div>
     </div>

@@ -25,7 +25,7 @@ function Connexion() {
   return (
     <div className="mx-auto max-w-md px-4 py-10">
       <div className="overflow-hidden rounded-[28px] border border-line/70 bg-white shadow-lift">
-        <AuthFlow onDone={() => router.replace(next)} />
+        <AuthFlow next={next} onDone={() => router.replace(next)} />
       </div>
     </div>
   );
