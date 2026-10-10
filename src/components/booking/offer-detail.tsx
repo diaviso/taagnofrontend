@@ -12,6 +12,7 @@ import { PersonCard } from "@/components/people/person-card";
 import { DateRangeField } from "@/components/search/date-field";
 import { StatusBadge } from "@/components/ui/badge";
 import { Button, LinkButton } from "@/components/ui/button";
+import { Switch } from "@/components/ui/field";
 import { Gallery } from "@/components/ui/gallery";
 import { Card, EmptyState } from "@/components/ui/misc";
 import { Modal } from "@/components/ui/modal";
@@ -62,6 +63,7 @@ function OfferView({ offer }: { offer: RentalOffer }) {
   })();
   const [start, setStart] = useState<Date | null>(preset[0]);
   const [end, setEnd] = useState<Date | null>(preset[1]);
+  const [withDriver, setWithDriver] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -84,7 +86,10 @@ function OfferView({ offer }: { offer: RentalOffer }) {
     return booked.some(([bs, be]) => d >= bs && d < be);
   };
   const days = start && end ? rentalDays(start, end) : 0;
-  const total = days * offer.pricePerDay;
+  // Chauffeur : seulement si l'annonce le propose ; sans tarif affiché, il est « à convenir » (hors total).
+  const driver = withDriver && offerWithDriver(offer);
+  const driverDaily = driver ? (offer.driverPricePerDay ?? 0) : 0;
+  const total = days * (offer.pricePerDay + driverDaily);
   const title = vehicleTitleYear(v);
 
   const pickDates = (s: Date | null, e: Date | null) => {
@@ -135,14 +140,34 @@ function OfferView({ offer }: { offer: RentalOffer }) {
       ) : (
         <div className="mt-6">
           <DateRangeField label="Vos dates" start={start} end={end} onChange={pickDates} minDays={offer.minDays} isDisabled={isDisabled} placeholder="Prise et retour du véhicule" />
+          {offerWithDriver(offer) && (
+            <div className="mt-4 flex items-center gap-3 rounded-[14px] border border-line px-4 py-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-brand-soft text-brand">
+                <UserRound className="h-5 w-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[15px] font-bold text-ink">Avec chauffeur</p>
+                <p className="text-[12.5px] leading-snug text-muted">
+                  {offer.driverPricePerDay ? `+ ${fcfa(offer.driverPricePerDay)} / jour` : "Tarif à convenir avec le propriétaire"}
+                </p>
+              </div>
+              <Switch checked={withDriver} onChange={setWithDriver} label="Avec chauffeur" />
+            </div>
+          )}
           {days > 0 && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-4 space-y-2 text-[14.5px]">
               <div className="flex justify-between">
                 <span className="text-muted">
                   {fcfa(offer.pricePerDay)} × {plural(days, "jour")}
                 </span>
-                <span className="font-bold text-ink">{fcfa(total)}</span>
+                <span className="font-bold text-ink">{fcfa(days * offer.pricePerDay)}</span>
               </div>
+              {driver && (
+                <div className="flex justify-between">
+                  <span className="text-muted">{offer.driverPricePerDay ? `Chauffeur × ${plural(days, "jour")}` : "Chauffeur"}</span>
+                  <span className="font-bold text-ink">{offer.driverPricePerDay ? fcfa(days * offer.driverPricePerDay) : "À convenir"}</span>
+                </div>
+              )}
               {offer.depositAmount > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted">Caution (rendue au retour)</span>
@@ -150,9 +175,12 @@ function OfferView({ offer }: { offer: RentalOffer }) {
                 </div>
               )}
               <div className="flex justify-between border-t border-dashed border-line pt-3 text-[16px]">
-                <span className="font-bold text-ink">Total de la location</span>
+                <span className="font-bold text-ink">Total estimé</span>
                 <span className="font-extrabold text-ink">{fcfa(total)}</span>
               </div>
+              {driver && !offer.driverPricePerDay && (
+                <p className="text-[12.5px] leading-snug text-muted">Le chauffeur n’est pas compté : son tarif se convient avec le propriétaire.</p>
+              )}
             </motion.div>
           )}
           <Button block size="xl" className="mt-5" disabled={!days} onClick={book}>
@@ -231,9 +259,11 @@ function OfferView({ offer }: { offer: RentalOffer }) {
                     </span>
                     <span className="text-[14.5px] font-semibold text-ink">
                       {rentalOptionLabel(o)}
-                      {o === "WITH_DRIVER" && offer.driverPricePerDay ? (
-                        <span className="block text-[12.5px] font-medium text-muted">+ {fcfa(offer.driverPricePerDay)} par jour, à convenir</span>
-                      ) : null}
+                      {o === "WITH_DRIVER" && (
+                        <span className="block text-[12.5px] font-medium text-muted">
+                          {offer.driverPricePerDay ? `+ ${fcfa(offer.driverPricePerDay)} par jour, à choisir dans votre demande` : "Tarif à convenir avec le propriétaire"}
+                        </span>
+                      )}
                     </span>
                   </div>
                 ))}
@@ -285,7 +315,7 @@ function OfferView({ offer }: { offer: RentalOffer }) {
         {panel}
       </Modal>
 
-      <ConfirmRental offer={offer} start={start} end={end} open={confirmOpen} onOpenChange={setConfirmOpen} />
+      <ConfirmRental offer={offer} start={start} end={end} withDriver={driver} open={confirmOpen} onOpenChange={setConfirmOpen} />
     </div>
   );
 }
@@ -306,12 +336,14 @@ function ConfirmRental({
   offer,
   start,
   end,
+  withDriver,
   open,
   onOpenChange,
 }: {
   offer: RentalOffer;
   start: Date | null;
   end: Date | null;
+  withDriver: boolean;
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }) {
@@ -320,11 +352,12 @@ function ConfirmRental({
   const [done, setDone] = useState(false);
   if (!start || !end) return null;
   const days = rentalDays(start, end);
+  const driverDaily = withDriver ? (offer.driverPricePerDay ?? 0) : 0;
 
   const confirm = async () => {
     setBusy(true);
     try {
-      await api.post(`/rental/offers/${offer.id}/bookings`, { startDate: apiDay(start), endDate: apiDay(end) });
+      await api.post(`/rental/offers/${offer.id}/bookings`, { startDate: apiDay(start), endDate: apiDay(end), ...(withDriver ? { withDriver: true } : {}) });
       setDone(true);
       await Promise.all([queryClient.invalidateQueries({ queryKey: ["offer", offer.id] }), queryClient.invalidateQueries({ queryKey: ["bookings"] })]);
     } catch (e) {
@@ -369,16 +402,33 @@ function ConfirmRental({
                 <KeyRound className="h-4 w-4 text-brand" /> {offer.pickupLocation}
               </p>
             )}
+            {withDriver && (
+              <p className="mt-2 flex items-center gap-1.5 text-[13.5px] font-semibold text-[#b45309]">
+                <UserRound className="h-4 w-4" /> Avec chauffeur
+              </p>
+            )}
           </div>
           <div className="mt-4 space-y-2 text-[14.5px]">
             <div className="flex justify-between">
               <span className="text-muted">Location</span>
               <span className="font-bold text-ink">{fcfa(days * offer.pricePerDay)}</span>
             </div>
+            {withDriver && (
+              <div className="flex justify-between gap-3">
+                <span className="text-muted">Chauffeur</span>
+                <span className="text-right font-bold text-ink">{offer.driverPricePerDay ? fcfa(days * offer.driverPricePerDay) : "À convenir avec le propriétaire"}</span>
+              </div>
+            )}
             {offer.depositAmount > 0 && (
               <div className="flex justify-between">
                 <span className="text-muted">Caution à prévoir</span>
                 <span className="font-bold text-ink">{fcfa(offer.depositAmount)}</span>
+              </div>
+            )}
+            {withDriver && (
+              <div className="flex justify-between border-t border-dashed border-line pt-3 text-[16px]">
+                <span className="font-bold text-ink">Total estimé</span>
+                <span className="font-extrabold text-ink">{fcfa(days * (offer.pricePerDay + driverDaily))}</span>
               </div>
             )}
           </div>

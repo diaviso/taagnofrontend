@@ -29,6 +29,9 @@ const STEP_INDEX: Record<Step, number> = {
   confirmPin: 3,
 };
 
+/** Numéro déjà connu du compte : celui en attente de vérification (SMS envoyé) ou le numéro enregistré. */
+const knownPhone = (u: User) => u.pendingPhone || u.phone || "";
+
 /** Première étape manquante d'un compte connecté (nom, numéro vérifié, code PIN). */
 function missingStep(u: User): Step | null {
   if (!hasName(u)) return "name";
@@ -58,11 +61,11 @@ export function AuthFlow({
   /** Page où revenir après une connexion Google (par défaut : la page courante). */
   next?: string;
 }) {
-  const { user, signIn, signOut, refresh } = useAuth();
+  const { user, signIn, signOut, adoptToken, refresh } = useAuth();
   // Compte déjà connecté mais incomplet (retour de Google…) : on démarre à l'étape manquante.
   const incomplete = user && !isProfileComplete(user) ? user : null;
   const [step, setStep] = useState<Step>(() => (incomplete ? (missingStep(incomplete) ?? "name") : "phone"));
-  const [phone, setPhone] = useState(() => formatPhoneInput(incomplete?.phone ?? ""));
+  const [phone, setPhone] = useState(() => formatPhoneInput(incomplete ? knownPhone(incomplete) : ""));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
@@ -82,7 +85,7 @@ export function AuthFlow({
   useEffect(() => {
     if (resumed.current || !user || isProfileComplete(user)) return;
     resumed.current = true;
-    setPhone(formatPhoneInput(user.phone ?? ""));
+    setPhone(formatPhoneInput(knownPhone(user)));
     setNewAccount(true);
     setFirstName(user.firstName ?? "");
     setLastName(user.lastName ?? "");
@@ -138,7 +141,7 @@ export function AuthFlow({
       setFirstName(u.firstName ?? "");
       setLastName(u.lastName ?? "");
     }
-    if (missing === "addPhone") setPhone(formatPhoneInput(u.phone ?? ""));
+    if (missing === "addPhone") setPhone(formatPhoneInput(knownPhone(u)));
     if (missing) go(missing);
     else finish(isNew, false);
   };
@@ -252,7 +255,10 @@ export function AuthFlow({
     }
     run(async () => {
       try {
-        await api.post("/users/me/pin", { pin });
+        // Le serveur ferme les autres sessions et renvoie un nouveau jeton : à enregistrer,
+        // sinon la session tomberait juste après.
+        const data = await api.post<{ access_token?: string }>("/users/me/pin", { pin });
+        if (data?.access_token) adoptToken(data.access_token);
       } catch (e) {
         setFirstPin(null);
         setStep("newPin");

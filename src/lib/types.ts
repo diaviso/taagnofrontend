@@ -12,6 +12,8 @@ export interface User {
   photoUrl?: string | null;
   phone?: string | null;
   phoneVerified?: boolean;
+  /** Nouveau numéro en attente de vérification par SMS (le numéro actuel reste actif). */
+  pendingPhone?: string | null;
   role?: "USER" | "ADMIN";
   userMode?: "VOYAGEUR" | "PROPRIETAIRE" | null;
   hasPin?: boolean;
@@ -113,6 +115,11 @@ export const BOOKING_STATUS: Record<BookingStatus, { label: string; tone: Tone }
 };
 
 export const isActiveBooking = (s: BookingStatus) => s === "PENDING" || s === "CONFIRMED";
+
+/** Qui a annulé une place de covoiturage (`SYSTEM` : demande expirée sans réponse). */
+export type TripCancelledBy = "PASSENGER" | "DRIVER" | "SYSTEM";
+/** Qui a annulé une location (`SYSTEM` : demande expirée sans réponse). */
+export type RentalCancelledBy = "RENTER" | "OWNER" | "SYSTEM";
 
 // ---------------------------------------------------------------------------
 // Options
@@ -228,6 +235,8 @@ export interface CarpoolReservation {
   passengerId?: string;
   seatsReserved: number;
   status: BookingStatus;
+  cancelledBy?: TripCancelledBy | null;
+  cancelReason?: string | null;
   trip?: CarpoolTrip | null;
   passenger?: User | null;
   createdAt?: string;
@@ -251,6 +260,32 @@ export interface CarpoolTrip {
   description?: string | null;
   options?: TripOption[];
   createdAt?: string;
+}
+
+export interface CancellationNotice {
+  /** Qui a annulé, en une phrase. */
+  title: string;
+  /** Motif donné par le conducteur ou le propriétaire, s'il y en a un. */
+  reason: string | null;
+}
+
+const cleanReason = (s?: string | null) => s?.trim() || null;
+
+/** Côté voyageur : qui a annulé sa place de covoiturage ? `null` si elle n'est pas annulée. */
+export function tripCancellation(r: CarpoolReservation): CancellationNotice | null {
+  if (r.status !== "CANCELLED") return null;
+  const reason = cleanReason(r.cancelReason);
+  switch (r.cancelledBy) {
+    case "DRIVER":
+      return { title: "Le conducteur a annulé votre place", reason };
+    case "SYSTEM":
+      return { title: "Demande expirée sans réponse", reason: null };
+    case "PASSENGER":
+      return { title: "Vous avez annulé", reason: null };
+    default:
+      // Trajet annulé en entier par le conducteur : les réservations n'ont pas d'auteur.
+      return r.trip?.status === "CANCELLED" ? { title: "Le conducteur a annulé le trajet", reason: null } : null;
+  }
 }
 
 export const isInstant = (t: CarpoolTrip) => (t.options ?? []).includes("INSTANT_BOOKING");
@@ -277,6 +312,12 @@ export interface RentalBooking {
   endDate: string;
   totalPrice: number;
   status: BookingStatus;
+  /** Location avec chauffeur (option `WITH_DRIVER` de l'annonce). */
+  withDriver?: boolean;
+  /** Supplément chauffeur par jour au moment de la demande ; `null` : tarif à convenir. */
+  driverPricePerDay?: number | null;
+  cancelledBy?: RentalCancelledBy | null;
+  cancelReason?: string | null;
   rentalOffer?: RentalOffer | null;
   renter?: User | null;
   createdAt?: string;
@@ -296,6 +337,21 @@ export interface RentalOffer {
   options?: RentalOption[];
   driverPricePerDay?: number | null;
   createdAt?: string;
+}
+
+/** Côté voyageur : qui a annulé sa location ? `null` si elle n'est pas annulée. */
+export function rentalCancellation(b: RentalBooking): CancellationNotice | null {
+  if (b.status !== "CANCELLED") return null;
+  switch (b.cancelledBy) {
+    case "OWNER":
+      return { title: "Le propriétaire a annulé la location", reason: cleanReason(b.cancelReason) };
+    case "SYSTEM":
+      return { title: "Demande expirée sans réponse", reason: null };
+    case "RENTER":
+      return { title: "Vous avez annulé", reason: null };
+    default:
+      return null;
+  }
 }
 
 export const offerWithDriver = (o: RentalOffer) => (o.options ?? []).includes("WITH_DRIVER");

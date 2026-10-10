@@ -1,3 +1,5 @@
+import { ArrowRight } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 export const LAST_UPDATE = "Dernière mise à jour : octobre 2026";
@@ -154,6 +156,78 @@ export const PRIVACY: LegalSection[] = [
   },
 ];
 
+/** Lien d'appel à l'action à la fin d'une section. */
+function SectionLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <Link href={href} className="inline-flex items-center gap-1.5 text-[15px] font-bold text-brand hover:underline">
+      {children} <ArrowRight className="h-4 w-4" />
+    </Link>
+  );
+}
+
+/**
+ * Suppression du compte (page exigée par Google Play). Décrit ce que fait réellement
+ * `deleteAccount` côté serveur : suppression en cascade, refus (409) si activité à venir.
+ */
+export const ACCOUNT_DELETION: LegalSection[] = [
+  {
+    title: "Supprimer votre compte",
+    intro:
+      "Vous pouvez supprimer votre compte vous-même, à tout moment. C’est le même compte pour le site, l’application Taagno et l’application Taagno Pro : le supprimer depuis l’un d’eux le supprime partout.",
+    bullets: [
+      "Dans l’application Taagno : onglet « Compte », puis « Supprimer mon compte » tout en bas de la page",
+      "Dans l’application Taagno Pro : onglet « Profil », puis « Supprimer mon compte » tout en bas de la page",
+      "Sur le site : connectez-vous, ouvrez la page « Compte », puis choisissez « Supprimer mon compte »",
+    ],
+    outro: "Une confirmation vous est demandée, puis la suppression est immédiate. Elle ne peut pas être annulée.",
+    extra: <SectionLink href="/compte">Ouvrir la page Compte</SectionLink>,
+  },
+  {
+    title: "Quand la suppression est impossible",
+    intro: "Pour ne laisser personne dans l’embarras, la suppression est refusée tant que votre compte a une activité à venir :",
+    bullets: [
+      "Une réservation de place (en attente ou confirmée) sur un trajet qui n’est pas encore parti",
+      "Une demande de location ou une location (en attente ou confirmée) dont la date de retour n’est pas passée",
+      "Un trajet que vous avez publié et qui n’est pas encore parti",
+      "Une demande (en attente ou confirmée) sur l’un de vos trajets ou l’une de vos annonces de location",
+    ],
+    outro: "Un message vous l’explique alors : annulez ou terminez d’abord ces réservations, trajets et locations, puis recommencez.",
+  },
+  {
+    title: "Ce qui est supprimé",
+    intro: "Une fois la suppression confirmée, votre compte et les données qui y sont rattachées sont effacés de nos serveurs :",
+    bullets: [
+      "Votre profil : nom, prénom, photo, présentation, numéro de téléphone, code PIN et adresse e-mail éventuelle",
+      "Vos véhicules, ainsi que les liens vers leurs photos et leurs documents (carte grise, assurance, visite technique)",
+      "Vos trajets, vos annonces de location et les demandes reçues",
+      "Vos réservations de places et vos demandes de location, y compris les anciennes",
+      "Vos alertes de trajet, vos notifications et les appareils enregistrés pour les notifications",
+      "Les avis que vous avez laissés et ceux que vous avez reçus",
+      "Vos favoris et vos dernières recherches, effacés de l’appareil où vous supprimez le compte (ils ne sont jamais enregistrés sur nos serveurs)",
+    ],
+    outro:
+      "Les avis que vous avez laissés ne sont pas gardés sous forme anonyme : ils disparaissent avec votre compte, et leur note est retirée de la moyenne des personnes que vous aviez notées.",
+  },
+  {
+    title: "Ce qui peut être conservé",
+    intro: "Quelques éléments échappent à la suppression du compte :",
+    bullets: [
+      "Les fichiers de vos photos et de vos documents de véhicule : leur adresse est effacée de nos serveurs, mais les fichiers eux-mêmes sont hébergés chez notre prestataire d’images et ne sont pas retirés automatiquement",
+      "Les notifications que d’autres personnes ont déjà reçues à votre sujet (une demande, une annulation…) : elles restent dans leur liste, avec votre prénom et l’initiale de votre nom",
+      "Ce que vous avez échangé en dehors de Taagno, par appel, SMS ou WhatsApp, avec un conducteur, un passager, un propriétaire ou un locataire",
+    ],
+    outro:
+      "Taagno ne gérant aucun paiement, aucun moyen de paiement ni historique de paiement n’est rattaché à votre compte. Notre politique de confidentialité fixe à 30 jours au maximum la durée de conservation après la suppression d’un compte.",
+    extra: <SectionLink href="/confidentialite">Lire la politique de confidentialité</SectionLink>,
+  },
+  {
+    title: "Besoin d’aide ?",
+    intro:
+      "Une difficulté pour supprimer votre compte, un doute sur ce qui sera effacé ? Passez par la page d’aide : nous répondons en général dans la journée.",
+    extra: <SectionLink href="/aide">Aller à la page d’aide</SectionLink>,
+  },
+];
+
 export const FAQ = [
   {
     q: "Comment créer un compte ?",
@@ -188,6 +262,10 @@ export const FAQ = [
     a: "Ouvrez « Mes réservations », sélectionnez la réservation et touchez « Annuler ». Le conducteur ou le propriétaire est prévenu automatiquement.",
   },
   {
+    q: "Comment supprimer mon compte ?",
+    a: "Dans l’onglet « Compte » (application Taagno ou site) ou « Profil » (application Taagno Pro), touchez « Supprimer mon compte » tout en bas. C’est impossible tant qu’une réservation, une location ou un trajet à venir est en cours. Le détail est sur la page « Suppression du compte ».",
+  },
+  {
     q: "Comment être prévenu d’un nouveau trajet ?",
     a: "Après une recherche, touchez « Créer une alerte ». Vous recevez une notification dès qu’un conducteur publie un trajet correspondant.",
   },
@@ -219,6 +297,7 @@ export function LegalPage({ title, subtitle, sections, contact }: { title: strin
               </ul>
             )}
             {s.outro && <p className="mt-3 text-[15px] leading-relaxed text-ink-soft">{s.outro}</p>}
+            {s.extra && <div className="mt-4">{s.extra}</div>}
           </section>
         ))}
         <section className="rounded-[22px] bg-brand-soft/60 p-6">

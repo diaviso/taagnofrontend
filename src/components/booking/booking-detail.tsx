@@ -1,13 +1,13 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowLeft, CalendarRange, Check, Flag, HandCoins, KeyRound, MapPin, Route, ShieldCheck, Star, X } from "lucide-react";
+import { ArrowLeft, CalendarRange, Check, Flag, HandCoins, KeyRound, MapPin, Route, ShieldCheck, Star, UserRound, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { PersonCard } from "@/components/people/person-card";
 import { VehicleSummary } from "@/components/people/vehicle-summary";
-import { StatusBadge } from "@/components/ui/badge";
+import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Card, EmptyState, InfoRow } from "@/components/ui/misc";
 import { ConfirmModal } from "@/components/ui/modal";
@@ -15,18 +15,21 @@ import { PageSpinner } from "@/components/ui/spinner";
 import { api } from "@/lib/api";
 import { daysUntil, fcfa, longDate, parseDay, plural, range, rentalDays, time } from "@/lib/format";
 import { useAction, useGivenReviews, useMyBookings, useMyReservations } from "@/lib/queries";
-import { BOOKING_STATUS, isActiveBooking, isPastTrip, type BookingStatus } from "@/lib/types";
+import { BOOKING_STATUS, isActiveBooking, isPastTrip, rentalCancellation, tripCancellation, type BookingStatus, type CancellationNotice } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ContactButtons } from "./contact-buttons";
 import { ReviewModal } from "./review-modal";
 
-/** Étapes d'une réservation. */
-function Progress({ status }: { status: BookingStatus }) {
+/** Étapes d'une réservation (ou, si elle est annulée, qui l'a annulée et pourquoi). */
+function Progress({ status, notice }: { status: BookingStatus; notice?: CancellationNotice | null }) {
   if (status === "REJECTED" || status === "CANCELLED") {
     return (
-      <div className="flex items-center gap-3 rounded-[16px] bg-surface-alt px-4 py-3 text-[14px] font-semibold text-ink-soft">
-        <X className="h-5 w-5 text-danger" />
-        {status === "REJECTED" ? "Demande refusée. Pas d’inquiétude : d’autres offres vous attendent." : "Réservation annulée."}
+      <div className="flex items-start gap-3 rounded-[16px] bg-surface-alt px-4 py-3 text-[14px] font-semibold text-ink-soft">
+        <X className="mt-px h-5 w-5 shrink-0 text-danger" />
+        <div className="min-w-0">
+          <p>{status === "REJECTED" ? "Demande refusée. Pas d’inquiétude : d’autres offres vous attendent." : (notice?.title ?? "Réservation annulée.")}</p>
+          {notice?.reason && <p className="mt-1 break-words font-medium text-muted">Motif : « {notice.reason} »</p>}
+        </div>
       </div>
     );
   }
@@ -113,11 +116,12 @@ export function TripBookingDetail({ id }: { id: string }) {
   const t = r.trip;
   const total = t.pricePerSeat * r.seatsReserved;
   const upcoming = !isPastTrip(t);
+  const notice = tripCancellation(r);
 
   return (
     <Shell back="/reservations" title={`${t.departureCity} → ${t.arrivalCity}`} status={r.status}>
       <Card className="p-5 sm:p-6">
-        <Progress status={r.status} />
+        <Progress status={r.status} notice={notice} />
         {r.status === "PENDING" && <p className="mt-4 text-[13.5px] text-muted">Le conducteur n’a pas encore répondu. Vous recevrez une notification dès qu’il accepte.</p>}
       </Card>
 
@@ -220,11 +224,13 @@ export function RentalBookingDetail({ id }: { id: string }) {
   const start = parseDay(b.startDate);
   const end = parseDay(b.endDate);
   const days = rentalDays(start, end);
+  const notice = rentalCancellation(b);
+  const driverPrice = b.withDriver ? b.driverPricePerDay : null;
 
   return (
     <Shell back="/reservations?onglet=locations" title={v ? `Location · ${v.brand} ${v.model}` : "Location"} status={b.status}>
       <Card className="p-5 sm:p-6">
-        <Progress status={b.status} />
+        <Progress status={b.status} notice={notice} />
         {b.status === "PENDING" && <p className="mt-4 text-[13.5px] text-muted">Le propriétaire n’a pas encore répondu. Vous serez prévenu dès qu’il accepte.</p>}
       </Card>
 
@@ -246,8 +252,24 @@ export function RentalBookingDetail({ id }: { id: string }) {
         <div className="mt-4 border-t border-line pt-2">
           <InfoRow icon={<CalendarRange />} label="Période" value={`${range(start, end)} (${plural(days, "jour")})`} />
           {offer?.pickupLocation && <InfoRow icon={<MapPin />} label="Remise des clés" value={offer.pickupLocation} />}
+          {b.withDriver && (
+            <InfoRow
+              icon={<UserRound />}
+              label="Chauffeur"
+              value={
+                <>
+                  <Badge tone="warning" icon={<UserRound />}>
+                    Avec chauffeur
+                  </Badge>
+                  <span className="mt-1 block text-[12.5px] font-medium text-muted">
+                    {driverPrice ? `+ ${fcfa(driverPrice)} / jour, compris dans le prix` : "Tarif à convenir avec le propriétaire"}
+                  </span>
+                </>
+              }
+            />
+          )}
           <InfoRow icon={<KeyRound />} label="Caution demandée" value={offer?.depositAmount ? fcfa(offer.depositAmount) : "Aucune"} />
-          <InfoRow icon={<HandCoins />} label="Prix de la location" value={fcfa(b.totalPrice)} className="border-t border-line pt-3" />
+          <InfoRow icon={<HandCoins />} label={driverPrice ? "Prix (chauffeur compris)" : "Prix de la location"} value={fcfa(b.totalPrice)} className="border-t border-line pt-3" />
         </div>
         {offer && (
           <LinkButton href={`/location/${offer.id}`} variant="ghost" size="sm" className="mt-2">
