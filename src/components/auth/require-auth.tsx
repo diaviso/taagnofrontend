@@ -13,16 +13,21 @@ export function RequireAuth({ children, title, text }: { children: ReactNode; ti
   const { status, user, requireAuth } = useAuth();
   if (status === "loading") return <PageSpinner />;
   if (status === "anonymous" || !user || !isProfileComplete(user)) {
+    const unfinished = !!user && !isProfileComplete(user);
     return (
       <div className="mx-auto max-w-lg px-4 py-14">
         <div className="rounded-[28px] border border-line/70 bg-white shadow-card">
           <EmptyState
             icon={<LockKeyhole />}
-            title={title ?? "Connectez-vous pour continuer"}
-            text={text ?? "Votre numéro de téléphone et votre code PIN suffisent. Pas encore de compte ? Il se crée en une minute."}
+            title={unfinished ? "Terminez votre inscription" : (title ?? "Connectez-vous pour continuer")}
+            text={
+              unfinished
+                ? "Il ne manque qu’une étape (votre nom, votre numéro ou votre code PIN) pour accéder à cette page."
+                : (text ?? "Votre numéro de téléphone et votre code PIN suffisent. Pas encore de compte ? Il se crée en une minute.")
+            }
             action={
               <Button size="lg" onClick={() => requireAuth()}>
-                Se connecter
+                {unfinished ? "Continuer" : "Se connecter"}
               </Button>
             }
           />

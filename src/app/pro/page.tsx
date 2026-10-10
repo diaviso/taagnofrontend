@@ -2,6 +2,7 @@ import { BadgeCheck, Banknote, CalendarCheck, CarFront, ClipboardCheck, HandCoin
 import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
 import { Faq } from "@/components/info/faq";
+import { SiteFooter } from "@/components/layout/site-footer";
 import { ProCta, ProHeaderActions } from "@/components/pro/pro-landing-actions";
 import { EarningsSimulator } from "@/components/pro/earnings-simulator";
 import { Reveal } from "@/components/ui/reveal";
@@ -154,17 +155,7 @@ export default function ProLandingPage() {
         </div>
       </section>
 
-      <footer className="mt-16 border-t border-line bg-white">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-6 text-[13px] text-muted sm:flex-row sm:px-6">
-          <Logo size={26} suffix="Pro" />
-          <div className="flex gap-5">
-            <Link href="/aide" className="hover:text-brand">Aide</Link>
-            <Link href="/conditions" className="hover:text-brand">Conditions</Link>
-            <Link href="/confidentialite" className="hover:text-brand">Confidentialité</Link>
-            <Link href="/" className="hover:text-brand">Site voyageur</Link>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter showCta={false} />
     </div>
   );
 }

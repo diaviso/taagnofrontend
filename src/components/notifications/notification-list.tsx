@@ -35,7 +35,13 @@ export function NotificationList({
         .then((r) => queryClient.setQueryData(["unread", audience], r.unread))
         .catch(() => {});
       queryClient.setQueryData(["notifications", audience], (old: typeof data) =>
-        old ? { ...old, items: old.items.map((x) => (x.id === n.id ? { ...x, readAt: new Date().toISOString() } : x)) } : old,
+        old
+          ? {
+              ...old,
+              unread: Math.max(0, old.unread - 1),
+              items: old.items.map((x) => (x.id === n.id ? { ...x, readAt: new Date().toISOString() } : x)),
+            }
+          : old,
       );
     }
     // L'événement (place confirmée, trajet terminé…) doit figurer dans les listes.

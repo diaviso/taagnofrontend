@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { OfferDetail } from "@/components/booking/offer-detail";
 import { fcfa } from "@/lib/format";
-import { serverGet } from "@/lib/server-api";
+import { isUuid, serverFetch } from "@/lib/server-api";
 import { coverUrl, vehicleTitleYear, type RentalOffer } from "@/lib/types";
 
 type Props = { params: Promise<{ id: string }> };
 
-const getOffer = (id: string) => serverGet<RentalOffer>(`/rental/offers/${encodeURIComponent(id)}`, 60);
+const fetchOffer = (id: string) => serverFetch<RentalOffer>(`/rental/offers/${encodeURIComponent(id)}`, 60);
+const getOffer = async (id: string) => (await fetchOffer(id)).data;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
@@ -21,6 +23,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function OfferPage({ params }: Props) {
   const { id } = await params;
-  const offer = await getOffer(id);
+  if (!isUuid(id)) notFound();
+  const { data: offer, notFound: missing } = await fetchOffer(id);
+  if (missing) notFound();
   return <OfferDetail id={id} initial={offer} />;
 }

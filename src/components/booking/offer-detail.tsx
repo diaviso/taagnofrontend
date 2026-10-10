@@ -3,13 +3,14 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ArrowLeft, CalendarRange, HandCoins, Info, KeyRound, MapPin, MessageSquareQuote, ShieldCheck, UserRound } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { FavoriteButton } from "@/components/cards/favorite-button";
 import { OptionIcon } from "@/components/cards/option-icon";
 import { PersonCard } from "@/components/people/person-card";
 import { DateRangeField } from "@/components/search/date-field";
+import { StatusBadge } from "@/components/ui/badge";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Gallery } from "@/components/ui/gallery";
 import { Card, EmptyState } from "@/components/ui/misc";
@@ -19,9 +20,9 @@ import { PageSpinner } from "@/components/ui/spinner";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { offerKey } from "@/lib/favorites";
-import { apiDay, fcfa, parseDay, plural, range, rentalDays } from "@/lib/format";
-import { useOffer } from "@/lib/queries";
-import { offerWithDriver, orderedPhotos, rentalOptionLabel, vehicleTitle, vehicleTitleYear, type RentalOffer } from "@/lib/types";
+import { apiDay, fcfa, parseDay, plural, range, rentalDays, startOfDay } from "@/lib/format";
+import { useMyBookings, useOffer } from "@/lib/queries";
+import { BOOKING_STATUS, isActiveBooking, offerWithDriver, orderedPhotos, rentalOptionLabel, vehicleTitle, vehicleTitleYear, type RentalOffer } from "@/lib/types";
 import { SuccessCheck } from "./success-check";
 
 export function OfferDetail({ id, initial }: { id: string; initial: RentalOffer | null }) {
@@ -44,31 +45,54 @@ export function OfferDetail({ id, initial }: { id: string; initial: RentalOffer 
 
 function OfferView({ offer }: { offer: RentalOffer }) {
   const router = useRouter();
+  const params = useSearchParams();
   const { user, requireAuth } = useAuth();
-  const [start, setStart] = useState<Date | null>(null);
-  const [end, setEnd] = useState<Date | null>(null);
+  const myBookings = useMyBookings();
+
+  // Dates reprises de la recherche (?start=…&end=…), si elles sont valides et à venir.
+  const preset = (() => {
+    const s = params.get("start");
+    const e = params.get("end");
+    if (!s || !e || !/^\d{4}-\d{2}-\d{2}$/.test(s) || !/^\d{4}-\d{2}-\d{2}$/.test(e)) return [null, null] as const;
+    const [a, b] = [s, e].map((x) => {
+      const [y, m, d] = x.split("-").map(Number);
+      return new Date(y, m - 1, d);
+    });
+    return a >= startOfDay(new Date()) && b > a ? ([a, b] as const) : ([null, null] as const);
+  })();
+  const [start, setStart] = useState<Date | null>(preset[0]);
+  const [end, setEnd] = useState<Date | null>(preset[1]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const v = offer.vehicle;
   const isOwner = !!user && user.id === v?.ownerId;
-  const booked = (offer.bookings ?? []).map((b) => [parseDay(b.startDate), parseDay(b.endDate)] as const);
-  // Un jour est pris s'il tombe dans une location existante (fin exclusive : jour de retour libre).
-  const isBooked = (d: Date) => booked.some(([s, e]) => d >= s && d < e);
+  const available = offer.isActive && v?.isActive !== false && (v?.status ?? "APPROVED") === "APPROVED";
+  // Demande déjà envoyée par ce voyageur (en attente ou confirmée, pas encore terminée).
+  const myRequest = (myBookings.data ?? []).find(
+    (b) => b.rentalOfferId === offer.id && isActiveBooking(b.status) && parseDay(b.endDate) >= startOfDay(new Date()),
+  );
+  // Seules les locations confirmées bloquent des jours (fin exclusive : le jour de retour reste libre).
+  const booked = (offer.bookings ?? [])
+    .filter((b) => b.status === "CONFIRMED")
+    .map((b) => [parseDay(b.startDate), parseDay(b.endDate)] as const);
+  const overlaps = (s: Date, e: Date) => booked.some(([bs, be]) => s < be && e > bs);
+  // Choix du départ : jour pris par une location. Choix du retour : période qui chevaucherait
+  // une location (le premier jour d'une autre location reste possible comme jour de retour).
+  const isDisabled = (d: Date) => {
+    if (start && !end && d > start) return overlaps(start, d);
+    return booked.some(([bs, be]) => d >= bs && d < be);
+  };
   const days = start && end ? rentalDays(start, end) : 0;
   const total = days * offer.pricePerDay;
   const title = vehicleTitleYear(v);
 
   const pickDates = (s: Date | null, e: Date | null) => {
-    if (s && e) {
-      for (let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) {
-        if (isBooked(d)) {
-          toast.error("Le véhicule est déjà loué sur une partie de cette période. Choisissez d’autres dates.");
-          setStart(s);
-          setEnd(null);
-          return;
-        }
-      }
+    if (s && e && overlaps(s, e)) {
+      toast.error("Le véhicule est déjà loué sur une partie de cette période. Choisissez d’autres dates.");
+      setStart(s);
+      setEnd(null);
+      return;
     }
     setStart(s);
     setEnd(e);
@@ -94,11 +118,23 @@ function OfferView({ offer }: { offer: RentalOffer }) {
             Gérer mon annonce
           </LinkButton>
         </div>
-      ) : !offer.isActive ? (
+      ) : myRequest ? (
+        <div className="mt-6 space-y-3">
+          <div className="flex items-center justify-between gap-3 rounded-[14px] bg-surface-alt px-4 py-3">
+            <span className="text-[14px] font-semibold text-ink">
+              Votre demande · {range(parseDay(myRequest.startDate), parseDay(myRequest.endDate))}
+            </span>
+            <StatusBadge status={myRequest.status} map={BOOKING_STATUS} />
+          </div>
+          <LinkButton href={`/reservations/location/${myRequest.id}`} block size="lg">
+            Voir ma demande
+          </LinkButton>
+        </div>
+      ) : !available ? (
         <p className="mt-6 rounded-[14px] bg-surface-alt px-4 py-4 text-center text-[14px] font-semibold text-ink-soft">Cette annonce est en pause pour le moment.</p>
       ) : (
         <div className="mt-6">
-          <DateRangeField label="Vos dates" start={start} end={end} onChange={pickDates} minDays={offer.minDays} isDisabled={isBooked} placeholder="Prise et retour du véhicule" />
+          <DateRangeField label="Vos dates" start={start} end={end} onChange={pickDates} minDays={offer.minDays} isDisabled={isDisabled} placeholder="Prise et retour du véhicule" />
           {days > 0 && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-4 space-y-2 text-[14.5px]">
               <div className="flex justify-between">
@@ -132,7 +168,7 @@ function OfferView({ offer }: { offer: RentalOffer }) {
   );
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-32 pt-5 sm:px-6 md:pb-12">
+    <div className="mx-auto max-w-6xl px-4 pb-2 pt-5 sm:px-6 lg:pb-12">
       <div className="flex items-center justify-between gap-3">
         <button
           type="button"
@@ -227,7 +263,7 @@ function OfferView({ offer }: { offer: RentalOffer }) {
         </div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-40 border-t border-line bg-white/95 px-4 py-3 backdrop-blur-xl md:bottom-0 lg:hidden">
+      <div className="sticky bottom-[calc(64px+env(safe-area-inset-bottom))] z-40 -mx-4 mt-6 border-t border-line bg-white/95 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 md:bottom-0 lg:hidden">
         <div className="mx-auto flex max-w-xl items-center gap-4">
           <div className="flex-1">
             <p className="text-[19px] font-extrabold leading-none text-ink">{fcfa(offer.pricePerDay)}</p>
@@ -238,8 +274,8 @@ function OfferView({ offer }: { offer: RentalOffer }) {
               Gérer
             </LinkButton>
           ) : (
-            <Button size="lg" disabled={!offer.isActive} onClick={() => setMobileOpen(true)}>
-              Choisir mes dates
+            <Button size="lg" disabled={!available && !myRequest} onClick={() => setMobileOpen(true)}>
+              {myRequest ? "Ma demande" : "Choisir mes dates"}
             </Button>
           )}
         </div>

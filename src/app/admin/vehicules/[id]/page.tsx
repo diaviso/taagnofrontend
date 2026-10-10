@@ -74,7 +74,7 @@ export default function AdminVehiclePage() {
                   )}
                   <div className="flex items-center justify-between gap-2 p-3">
                     <span className="text-[14px] font-bold text-ink">{label}</span>
-                    {doc && <StatusBadge status={doc.status} map={DOCUMENT_STATUS} />}
+                    {doc && <StatusBadge status={v.status === "APPROVED" ? "APPROVED" : doc.status} map={DOCUMENT_STATUS} />}
                   </div>
                 </div>
               ))}

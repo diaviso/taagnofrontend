@@ -12,7 +12,7 @@ import { FavoriteButton } from "./favorite-button";
 import { OptionIcon } from "./option-icon";
 
 /** Carte d'une offre de location : photo, véhicule, ville, prix par jour. */
-export function OfferCard({ offer, index = 0, days }: { offer: RentalOffer; index?: number; days?: number }) {
+export function OfferCard({ offer, index = 0, days, linkQuery }: { offer: RentalOffer; index?: number; days?: number; linkQuery?: string }) {
   const v = offer.vehicle;
   const photo = cdn(coverUrl(v), 720);
   const extras = (offer.options ?? []).filter((o) => o !== "WITH_DRIVER").slice(0, 3);
@@ -24,7 +24,7 @@ export function OfferCard({ offer, index = 0, days }: { offer: RentalOffer; inde
       transition={{ duration: 0.35, delay: Math.min(index, 8) * 0.045 }}
     >
       <Link
-        href={`/location/${offer.id}`}
+        href={`/location/${offer.id}${linkQuery ? `?${linkQuery}` : ""}`}
         className="group block overflow-hidden rounded-[22px] border border-line/70 bg-white shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lift"
       >
         <div className="relative aspect-[4/3] overflow-hidden bg-surface-alt">

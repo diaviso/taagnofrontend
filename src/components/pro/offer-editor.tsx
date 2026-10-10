@@ -129,7 +129,11 @@ function OfferForm({ existing, vehicles }: { existing?: RentalOffer; vehicles: V
       minDays,
       isActive: active,
       options,
-      ...(withDriver && Number(driverPrice) ? { driverPricePerDay: Number(driverPrice) } : {}),
+      ...(withDriver && Number(driverPrice)
+        ? { driverPricePerDay: Number(driverPrice) }
+        : existing?.driverPricePerDay
+          ? { driverPricePerDay: null } // option retirée ou champ vidé : l'ancien supplément est effacé
+          : {}),
     };
     try {
       if (existing) {

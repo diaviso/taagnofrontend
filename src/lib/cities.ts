@@ -12,6 +12,18 @@ export const SENEGAL_CITIES = [
   "Foundiougne", "Sokone", "Toubab Dialaw", "Popenguine", "Lac Rose",
 ];
 
+/**
+ * Nom officiel d'une ville saisie librement : « thies » → « Thiès », « saint louis » →
+ * « Saint-Louis ». La recherche du serveur ne tient pas compte des accents : sans cela,
+ * « Thies » ne trouverait pas les trajets de « Thiès ». Une ville inconnue reste telle quelle.
+ */
+export function canonicalCity(input: string) {
+  const key = (s: string) => fold(s).replace(/[-'’\s]+/g, " ").trim();
+  const k = key(input);
+  if (!k) return input.trim();
+  return SENEGAL_CITIES.find((c) => key(c) === k) ?? input.trim();
+}
+
 /** Villes correspondant à `query` (début de mot d'abord), au plus `limit`. */
 export function matchCities(query: string, limit = 6) {
   const q = fold(query);

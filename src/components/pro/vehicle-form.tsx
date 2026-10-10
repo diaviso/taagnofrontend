@@ -118,7 +118,7 @@ export function VehicleForm({
         />
         <Field label="Nombre de places" hint="Conducteur compris">
           <div className="flex h-12 items-center rounded-[14px] border border-line bg-white px-3">
-            <Counter value={seats} onChange={setSeats} min={2} max={30} />
+            <Counter value={seats} onChange={setSeats} min={Math.min(2, seats)} max={50} />
           </div>
         </Field>
       </div>

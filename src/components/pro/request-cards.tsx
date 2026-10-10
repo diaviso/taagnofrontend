@@ -13,7 +13,7 @@ import { ConfirmModal } from "@/components/ui/modal";
 import { RatingPill } from "@/components/ui/rating";
 import { api } from "@/lib/api";
 import { day, fcfa, parseDay, plural, range, rentalDays, startOfDay, time } from "@/lib/format";
-import { type RentalRequest, type TripRequest } from "@/lib/pro";
+import { isStaleRentalRequest, isStaleTripRequest, type RentalRequest, type TripRequest } from "@/lib/pro";
 import { useAction, useGivenReviews } from "@/lib/queries";
 import { BOOKING_STATUS, shortName, userRating, vehicleTitle } from "@/lib/types";
 
@@ -47,9 +47,13 @@ export function TripRequestCard({ request, showTrip = true, index = 0 }: { reque
         </Link>
       )}
       <div className="flex items-center gap-3">
-        <Link href={p?.id ? `/membres/${p.id}` : "#"} className="shrink-0">
+        {p?.id ? (
+          <Link href={`/membres/${p.id}`} className="shrink-0" aria-label={`Profil de ${shortName(p)}`}>
+            <Avatar user={p} size={46} />
+          </Link>
+        ) : (
           <Avatar user={p} size={46} />
-        </Link>
+        )}
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15.5px] font-extrabold text-ink">{shortName(p)}</p>
           <div className="flex flex-wrap items-center gap-x-2 text-[13px] text-muted">
@@ -62,7 +66,10 @@ export function TripRequestCard({ request, showTrip = true, index = 0 }: { reque
         <StatusBadge status={r.status} map={BOOKING_STATUS} />
       </div>
 
-      {r.status === "PENDING" && (
+      {r.status === "PENDING" && isStaleTripRequest(request) && (
+        <p className="mt-4 rounded-[14px] bg-surface-alt px-4 py-3 text-[13px] text-muted">Le trajet est parti sans réponse : cette demande va expirer.</p>
+      )}
+      {r.status === "PENDING" && !isStaleTripRequest(request) && (
         <div className="mt-4 flex gap-2">
           <Button variant="outline" className="flex-1" icon={<X className="h-4 w-4" />} disabled={!!busy} onClick={() => setRejectOpen(true)}>
             Refuser
@@ -140,9 +147,13 @@ export function RentalRequestCard({ request, showOffer = true, index = 0 }: { re
         </Link>
       )}
       <div className="flex items-center gap-3">
-        <Link href={renter?.id ? `/membres/${renter.id}` : "#"} className="shrink-0">
+        {renter?.id ? (
+          <Link href={`/membres/${renter.id}`} className="shrink-0" aria-label={`Profil de ${shortName(renter)}`}>
+            <Avatar user={renter} size={46} />
+          </Link>
+        ) : (
           <Avatar user={renter} size={46} />
-        </Link>
+        )}
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15.5px] font-extrabold text-ink">{shortName(renter)}</p>
           <div className="flex flex-wrap items-center gap-x-2 text-[13px] text-muted">
@@ -158,7 +169,10 @@ export function RentalRequestCard({ request, showOffer = true, index = 0 }: { re
         <span className="font-extrabold text-ink">{fcfa(b.totalPrice)}</span>
       </div>
 
-      {b.status === "PENDING" && (
+      {b.status === "PENDING" && isStaleRentalRequest(request) && (
+        <p className="mt-4 rounded-[14px] bg-surface-alt px-4 py-3 text-[13px] text-muted">La date de début est passée sans réponse : cette demande va expirer.</p>
+      )}
+      {b.status === "PENDING" && !isStaleRentalRequest(request) && (
         <div className="mt-4 flex gap-2">
           <Button variant="outline" className="flex-1" icon={<X className="h-4 w-4" />} disabled={!!busy} onClick={() => setRejectOpen(true)}>
             Refuser

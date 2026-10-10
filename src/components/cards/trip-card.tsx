@@ -14,7 +14,7 @@ import { FavoriteButton } from "./favorite-button";
 import { OptionIcon } from "./option-icon";
 
 /** Carte d'un trajet : horaires, villes, prix, conducteur. */
-export function TripCard({ trip, index = 0, showDay = true }: { trip: CarpoolTrip; index?: number; showDay?: boolean }) {
+export function TripCard({ trip, index = 0, showDay = true, linkQuery }: { trip: CarpoolTrip; index?: number; showDay?: boolean; linkQuery?: string }) {
   const instant = isInstant(trip);
   const few = trip.availableSeats > 0 && trip.availableSeats <= 2;
   const extras = (trip.options ?? []).filter((o) => o !== "INSTANT_BOOKING").slice(0, 4);
@@ -26,7 +26,7 @@ export function TripCard({ trip, index = 0, showDay = true }: { trip: CarpoolTri
       transition={{ duration: 0.35, delay: Math.min(index, 8) * 0.045 }}
     >
       <Link
-        href={`/covoiturage/${trip.id}`}
+        href={`/covoiturage/${trip.id}${linkQuery ? `?${linkQuery}` : ""}`}
         className="group block rounded-[22px] border border-line/70 bg-white p-4 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-lift sm:p-5"
       >
         <div className="flex items-start gap-4">

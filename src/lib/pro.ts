@@ -14,6 +14,14 @@ export const isEditable = (t: CarpoolTrip) => t.status === "OPEN" && !isPastTrip
 /** Places proposées au total. */
 export const seatsOffered = (t: CarpoolTrip) => confirmedSeats(t) + t.availableSeats;
 
+/** Une annonce est vue des voyageurs si elle est active ET si son véhicule est approuvé et actif. */
+export function offerVisibility(o: RentalOffer): { visible: boolean; reason: string } {
+  if (!o.isActive) return { visible: false, reason: "En pause" };
+  if (o.vehicle && o.vehicle.status !== "APPROVED") return { visible: false, reason: "Véhicule en vérification" };
+  if (o.vehicle && o.vehicle.isActive === false) return { visible: false, reason: "Véhicule désactivé" };
+  return { visible: true, reason: "En ligne" };
+}
+
 export const canCarpool = (v: Vehicle) => v.status === "APPROVED" && !!v.isForCarpooling && v.isActive !== false;
 export const canRent = (v: Vehicle) => v.status === "APPROVED" && !!v.isForRental && v.isActive !== false;
 export const usageLabel = (v: Vehicle) => [v.isForCarpooling && "Covoiturage", v.isForRental && "Location"].filter(Boolean).join(" · ") || "Aucun usage";
@@ -34,23 +42,31 @@ export interface RequestGroups<T> {
   history: T[];
 }
 
+/** Demande restée sans réponse alors que le trajet est parti : elle ne peut plus être acceptée. */
+export const isStaleTripRequest = (r: TripRequest) => r.reservation.status === "PENDING" && isPastTrip(r.trip);
+/** Demande de location restée sans réponse alors que la location a commencé. */
+export const isStaleRentalRequest = (r: RentalRequest) =>
+  r.booking.status === "PENDING" && parseDay(r.booking.startDate) < startOfDay(new Date());
+
 export function groupTripRequests(trips: CarpoolTrip[]): RequestGroups<TripRequest> {
   const all = trips.flatMap((trip) => (trip.reservations ?? []).map((reservation) => ({ trip, reservation })));
   const t = (r: TripRequest) => new Date(r.trip.departureTime).getTime();
+  const pending = (r: TripRequest) => r.reservation.status === "PENDING" && !isStaleTripRequest(r);
   return {
-    pending: all.filter((r) => r.reservation.status === "PENDING").sort((a, b) => t(a) - t(b)),
+    pending: all.filter(pending).sort((a, b) => t(a) - t(b)),
     confirmed: all.filter((r) => r.reservation.status === "CONFIRMED").sort((a, b) => t(a) - t(b)),
-    history: all.filter((r) => r.reservation.status !== "PENDING" && r.reservation.status !== "CONFIRMED").sort((a, b) => t(b) - t(a)),
+    history: all.filter((r) => !pending(r) && r.reservation.status !== "CONFIRMED").sort((a, b) => t(b) - t(a)),
   };
 }
 
 export function groupRentalRequests(offers: RentalOffer[]): RequestGroups<RentalRequest> {
   const all = offers.flatMap((offer) => (offer.bookings ?? []).map((booking) => ({ offer, booking })));
   const t = (r: RentalRequest) => new Date(r.booking.startDate).getTime();
+  const pending = (r: RentalRequest) => r.booking.status === "PENDING" && !isStaleRentalRequest(r);
   return {
-    pending: all.filter((r) => r.booking.status === "PENDING").sort((a, b) => t(a) - t(b)),
+    pending: all.filter(pending).sort((a, b) => t(a) - t(b)),
     confirmed: all.filter((r) => r.booking.status === "CONFIRMED").sort((a, b) => t(a) - t(b)),
-    history: all.filter((r) => r.booking.status !== "PENDING" && r.booking.status !== "CONFIRMED").sort((a, b) => t(b) - t(a)),
+    history: all.filter((r) => !pending(r) && r.booking.status !== "CONFIRMED").sort((a, b) => t(b) - t(a)),
   };
 }
 

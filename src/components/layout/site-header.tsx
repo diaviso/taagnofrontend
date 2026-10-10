@@ -95,6 +95,16 @@ export function SiteHeader() {
           >
             <CarFront className="h-4 w-4" /> Proposer un trajet ou une voiture
           </Link>
+          <Link
+            href="/pro"
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-extrabold transition lg:hidden",
+              light ? "bg-white/15 text-white" : "bg-[#fdf0dc] text-[#b45309]",
+            )}
+            aria-label="Taagno Pro : proposer un trajet ou une voiture"
+          >
+            <CarFront className="h-4 w-4" /> Pro
+          </Link>
           {status === "authenticated" ? (
             <>
               <NotificationBell audience="VOYAGEUR" className={light ? "text-white hover:bg-white/10 hover:text-white" : undefined} />

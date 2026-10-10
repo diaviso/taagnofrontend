@@ -29,8 +29,9 @@ export function MyBookings() {
   const trips = useMemo(() => split(reservations.data ?? [], (r) => r.trip?.departureTime, (r) => isActiveBooking(r.status)), [reservations.data]);
   const rentals = useMemo(() => split(bookings.data ?? [], (b) => b.endDate, (b) => isActiveBooking(b.status)), [bookings.data]);
 
-  const pendingReviewTrips = (reservations.data ?? []).filter((r) => r.status === "COMPLETED" && !given.data?.carpoolReservationIds.includes(r.id)).length;
-  const pendingReviewRentals = (bookings.data ?? []).filter((b) => b.status === "COMPLETED" && !given.data?.rentalBookingIds.includes(b.id)).length;
+  // Tant que les avis déjà donnés ne sont pas chargés, on ne propose pas de noter.
+  const pendingReviewTrips = given.data ? (reservations.data ?? []).filter((r) => r.status === "COMPLETED" && !given.data.carpoolReservationIds.includes(r.id)).length : 0;
+  const pendingReviewRentals = given.data ? (bookings.data ?? []).filter((b) => b.status === "COMPLETED" && !given.data.rentalBookingIds.includes(b.id)).length : 0;
 
   return (
     <div className="mx-auto max-w-3xl px-4 pb-10 pt-6 sm:px-6 sm:pt-8">
@@ -62,9 +63,9 @@ export function MyBookings() {
             <Sections
               upcoming={trips.upcoming.map((r, i) => <TripBookingCard key={r.id} r={r} index={i} />)}
               past={trips.past.map((r, i) => (
-                <TripBookingCard key={r.id} r={r} index={i} canReview={r.status === "COMPLETED" && !given.data?.carpoolReservationIds.includes(r.id)} />
+                <TripBookingCard key={r.id} r={r} index={i} canReview={r.status === "COMPLETED" && !!given.data && !given.data.carpoolReservationIds.includes(r.id)} />
               ))}
-              pastHint={pendingReviewTrips ? `${plural(pendingReviewTrips, "avis")} à donner` : undefined}
+              pastHint={pendingReviewTrips ? `${plural(pendingReviewTrips, "avis", "avis")} à donner` : undefined}
             />
           )
         ) : bookings.isPending ? (
@@ -75,9 +76,9 @@ export function MyBookings() {
           <Sections
             upcoming={rentals.upcoming.map((b, i) => <RentalBookingCard key={b.id} b={b} index={i} />)}
             past={rentals.past.map((b, i) => (
-              <RentalBookingCard key={b.id} b={b} index={i} canReview={b.status === "COMPLETED" && !given.data?.rentalBookingIds.includes(b.id)} />
+              <RentalBookingCard key={b.id} b={b} index={i} canReview={b.status === "COMPLETED" && !!given.data && !given.data.rentalBookingIds.includes(b.id)} />
             ))}
-            pastHint={pendingReviewRentals ? `${plural(pendingReviewRentals, "avis")} à donner` : undefined}
+            pastHint={pendingReviewRentals ? `${plural(pendingReviewRentals, "avis", "avis")} à donner` : undefined}
           />
         )}
       </div>

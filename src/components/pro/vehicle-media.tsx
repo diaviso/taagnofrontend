@@ -15,8 +15,8 @@ import { cn } from "@/lib/utils";
 const MAX_MB = 8;
 
 function checkImage(file: File) {
-  if (!file.type.startsWith("image/")) {
-    toast.error(`${file.name} : choisissez une image (JPG, PNG).`);
+  if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+    toast.error(`${file.name} : choisissez une photo JPG, PNG ou WebP.`);
     return false;
   }
   if (file.size > MAX_MB * 1024 * 1024) {
@@ -115,7 +115,7 @@ export function PhotoManager({ vehicle }: { vehicle: Vehicle }) {
           <span className="text-[13px] font-bold">Ajouter des photos</span>
         </button>
       </div>
-      <input ref={inputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => add(e.target.files)} />
+      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={(e) => add(e.target.files)} />
       <p className="mt-3 flex items-center gap-2 text-[12.5px] text-muted">
         <Camera className="h-4 w-4" /> Conseil : avant, arrière, intérieur et tableau de bord, en pleine lumière.
       </p>
@@ -169,9 +169,14 @@ export function DocumentsSection({ vehicle }: { vehicle: Vehicle }) {
             )}
             <div className="min-w-0 flex-1">
               <p className="text-[15px] font-extrabold text-ink">{label}</p>
-              {doc ? <StatusBadge status={doc.status} map={DOCUMENT_STATUS} /> : <p className="text-[12.5px] text-muted">{hint}</p>}
+              {doc ? (
+                // Un véhicule approuvé a des documents validés (les anciens restaient « en vérification »).
+                <StatusBadge status={vehicle.status === "APPROVED" ? "APPROVED" : doc.status} map={DOCUMENT_STATUS} />
+              ) : (
+                <p className="text-[12.5px] text-muted">{hint}</p>
+              )}
             </div>
-            <input ref={(el) => { refs.current[value] = el; }} type="file" accept="image/*" className="hidden" onChange={(e) => upload(value, e.target.files?.[0])} />
+            <input ref={(el) => { refs.current[value] = el; }} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => upload(value, e.target.files?.[0])} />
             <div className="flex items-center gap-1.5">
               <button
                 type="button"

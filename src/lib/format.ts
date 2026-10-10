@@ -33,15 +33,27 @@ export function fcfaCompact(value: number) {
 export const plural = (n: number, singular: string, pluralForm?: string) =>
   `${n} ${n > 1 ? (pluralForm ?? `${singular}s`) : singular}`;
 
-const dtf = (opts: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("fr-FR", opts);
-const F_TIME = dtf({ hour: "2-digit", minute: "2-digit" });
-const F_DAY = dtf({ weekday: "short", day: "numeric", month: "short" });
-const F_DATE = dtf({ day: "numeric", month: "short", year: "numeric" });
-const F_DATE_SHORT = dtf({ day: "numeric", month: "short" });
-const F_LONG = dtf({ weekday: "long", day: "numeric", month: "long", year: "numeric" });
-const F_DAY_MONTH = dtf({ day: "numeric", month: "long" });
-const F_MONTH = dtf({ month: "short" });
-const F_MONTH_YEAR = dtf({ month: "long", year: "numeric" });
+/**
+ * Les horaires des trajets (chaînes ISO de l'API) s'affichent toujours à l'heure de Dakar,
+ * même consultés depuis l'étranger ; les jours choisis dans un calendrier (objets Date)
+ * restent dans le calendrier de l'appareil.
+ */
+export const DAKAR_TZ = "Africa/Dakar";
+
+function formatter(opts: Intl.DateTimeFormatOptions) {
+  const local = new Intl.DateTimeFormat("fr-FR", opts);
+  const dakar = new Intl.DateTimeFormat("fr-FR", { ...opts, timeZone: DAKAR_TZ });
+  return { format: (d: Date | string) => (typeof d === "string" ? dakar.format(new Date(d)) : local.format(d)) };
+}
+
+const F_TIME = formatter({ hour: "2-digit", minute: "2-digit" });
+const F_DAY = formatter({ weekday: "short", day: "numeric", month: "short" });
+const F_DATE = formatter({ day: "numeric", month: "short", year: "numeric" });
+const F_DATE_SHORT = formatter({ day: "numeric", month: "short" });
+const F_LONG = formatter({ weekday: "long", day: "numeric", month: "long", year: "numeric" });
+const F_DAY_MONTH = formatter({ day: "numeric", month: "long" });
+const F_MONTH = formatter({ month: "short" });
+const F_MONTH_YEAR = formatter({ month: "long", year: "numeric" });
 
 export const toDate = (d: Date | string) => (typeof d === "string" ? new Date(d) : d);
 
@@ -62,9 +74,13 @@ export function startOfDay(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
+/** Jours d'écart avec aujourd'hui : calendrier de Dakar (UTC toute l'année) pour un horaire ISO. */
 export function daysUntil(date: Date | string) {
+  if (typeof date === "string") {
+    return Math.floor(Date.parse(date) / 86_400_000) - Math.floor(Date.now() / 86_400_000);
+  }
   const today = startOfDay(new Date());
-  const target = startOfDay(toDate(date));
+  const target = startOfDay(date);
   return Math.round((target.getTime() - today.getTime()) / 86_400_000);
 }
 
@@ -77,7 +93,7 @@ export function rentalDays(start: Date, end: Date) {
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-export const time = (d: Date | string) => F_TIME.format(toDate(d));
+export const time = (d: Date | string) => F_TIME.format(d);
 
 /** « Aujourd’hui », « Demain », « Hier » ou « sam. 12 oct. » */
 export function day(d: Date | string) {
@@ -85,31 +101,31 @@ export function day(d: Date | string) {
   if (n === 0) return "Aujourd’hui";
   if (n === 1) return "Demain";
   if (n === -1) return "Hier";
-  return cap(F_DAY.format(toDate(d)));
+  return cap(F_DAY.format(d));
 }
 
 /** « Demain à 08:30 » */
 export const dayTime = (d: Date | string) => `${day(d)} à ${time(d)}`;
 
-export const date = (d?: Date | string | null) => (d ? F_DATE.format(toDate(d)) : "—");
-export const dateShort = (d?: Date | string | null) => (d ? F_DATE_SHORT.format(toDate(d)) : "—");
-export const longDate = (d: Date | string) => cap(F_LONG.format(toDate(d)));
+export const date = (d?: Date | string | null) => (d ? F_DATE.format(d) : "—");
+export const dateShort = (d?: Date | string | null) => (d ? F_DATE_SHORT.format(d) : "—");
+export const longDate = (d: Date | string) => cap(F_LONG.format(d));
 export const monthShort = (d: Date) => cap(F_MONTH.format(d).replace(".", ""));
 export const monthYear = (d: Date) => cap(F_MONTH_YEAR.format(d));
 
 /** « 1er novembre », « 5 novembre » */
 export function dayMonth(d: Date | string) {
-  const x = toDate(d);
-  const s = F_DAY_MONTH.format(x);
-  return x.getDate() === 1 ? s.replace(/^1 /, "1er ") : s;
+  const first = typeof d === "string" ? new Date(d).getUTCDate() === 1 : d.getDate() === 1;
+  const s = F_DAY_MONTH.format(d);
+  return first ? s.replace(/^1 /, "1er ") : s;
 }
 
 /** « Du 12 au 15 oct. » / « Du 28 sept. au 2 oct. » */
 export function range(start: Date, end: Date) {
   if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
-    return `Du ${start.getDate()} au ${F_DATE_SHORT.format(end)}`;
+    return `Du ${start.getDate() === 1 ? "1er" : start.getDate()} au ${F_DATE_SHORT.format(end)}`;
   }
-  return `Du ${F_DATE_SHORT.format(start)} au ${F_DATE_SHORT.format(end)}`;
+  return `Du ${F_DATE_SHORT.format(start).replace(/^1 /, "1er ")} au ${F_DATE_SHORT.format(end)}`;
 }
 
 /** « à l’instant », « il y a 5 min », « hier », « 12 sept. » */
@@ -141,4 +157,4 @@ export function countdown(d: Date | string) {
 export const rating = (value: number) => value.toFixed(1).replace(".", ",");
 
 /** « membre depuis mars 2025 » */
-export const memberSince = (d?: string | null) => (d ? `Membre depuis ${F_MONTH_YEAR.format(new Date(d))}` : "");
+export const memberSince = (d?: string | null) => (d ? `Membre depuis ${F_MONTH_YEAR.format(d)}` : "");

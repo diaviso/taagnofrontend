@@ -20,7 +20,7 @@ export function AuthDialog() {
   return (
     <Modal open={state.open} onOpenChange={onOpenChange} title="Connexion" hideHeader size="sm" className="sm:max-w-[440px]">
       <div className="-mx-6 -mb-6 -mt-2">
-        <AuthFlow reason={state.reason} onDone={() => close(true)} />
+        <AuthFlow reason={state.reason} onDone={() => close(true)} onClose={() => onOpenChange(false)} />
       </div>
     </Modal>
   );
