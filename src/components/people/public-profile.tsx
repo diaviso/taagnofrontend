@@ -3,6 +3,7 @@
 import { BadgeCheck, CarFront, KeyRound, MessageSquareHeart, Route, Users } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { LinkButton } from "@/components/ui/button";
+import { ReportButton } from "@/components/reports/report-button";
 import { Card, EmptyState } from "@/components/ui/misc";
 import { RatingPill, Stars } from "@/components/ui/rating";
 import { PageSpinner } from "@/components/ui/spinner";
@@ -86,6 +87,10 @@ export function PublicProfileView({ id, initial }: { id: string; initial: Public
           </ul>
         )}
       </Card>
+
+      <div className="mt-4 flex justify-center">
+        <ReportButton targetType="USER" targetId={profile.id} ownerId={profile.id} />
+      </div>
     </div>
   );
 }

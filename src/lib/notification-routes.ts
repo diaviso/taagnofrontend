@@ -1,4 +1,4 @@
-import { BellRing, CalendarCheck, Car, KeyRound, MessageSquareHeart, Star, Ticket, type LucideIcon } from "lucide-react";
+import { BellRing, CalendarCheck, Car, KeyRound, Megaphone, MessageSquareHeart, Star, Ticket, type LucideIcon } from "lucide-react";
 import type { Audience } from "./types";
 
 /** Page ouverte par une notification (mêmes règles que les applications). */
@@ -40,6 +40,7 @@ export const NOTIFICATION_STYLE: Record<string, { icon: LucideIcon; color: strin
   vehicle: { icon: Car, color: "var(--info)" },
   review: { icon: MessageSquareHeart, color: "var(--gold)" },
   trip_alert: { icon: BellRing, color: "var(--success)" },
+  announcement: { icon: Megaphone, color: "var(--brand)" },
 };
 
 export const notificationStyle = (kind: string) => NOTIFICATION_STYLE[kind] ?? { icon: BellRing, color: "var(--muted)" };

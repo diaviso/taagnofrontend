@@ -46,6 +46,23 @@ export function whatsappLink(phone: string, text?: string) {
   return `https://wa.me/221${d}${q}`;
 }
 
+/**
+ * Numéro de contact du support tel que le serveur l'attend : « +221771234567 » ou un autre
+ * numéro international (« +33612345678 »). `null` si la saisie n'est pas un numéro valide.
+ */
+export function normalizeContactPhone(input: string) {
+  const t = input.replace(/[\s.-]/g, "");
+  if (/^\+\d{7,15}$/.test(t)) return t;
+  return isValidPhone(input) ? phoneE164(input) : null;
+}
+
+/** Lien WhatsApp vers un numéro de contact (sénégalais ou international). */
+export function contactWhatsappLink(phone: string, text?: string) {
+  const t = phone.trim();
+  const digits = t.startsWith("+") ? t.replace(/\D/g, "") : `221${phoneDigits(t)}`;
+  return `https://wa.me/${digits}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
+}
+
 /** Codes PIN refusés par le serveur (chiffres identiques, suites, codes courants, années). */
 export function isWeakPin(pin: string) {
   if (/^(\d)\1{3}$/.test(pin)) return true;

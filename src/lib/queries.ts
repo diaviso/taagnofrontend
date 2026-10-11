@@ -13,6 +13,7 @@ import type {
   GivenReviews,
   NotificationsPage,
   PublicProfile,
+  PublicSettings,
   RentalBooking,
   RentalOffer,
   TripAlert,
@@ -106,6 +107,19 @@ export const useUserReviews = (id?: string | null) =>
     queryKey: ["reviews", id],
     queryFn: () => api.get<UserReviews>(`/reviews/user/${id}`),
     enabled: !!id,
+  });
+
+/**
+ * Contact du support et bandeau d'annonce, réglés depuis l'administration. Peu de choses
+ * changent d'une page à l'autre : la réponse reste en cache longtemps.
+ */
+export const usePublicSettings = () =>
+  useQuery({
+    queryKey: ["settings", "public"],
+    queryFn: () => api.get<PublicSettings>("/settings/public"),
+    staleTime: 30 * 60_000,
+    gcTime: 60 * 60_000,
+    refetchOnWindowFocus: false,
   });
 
 // ---------------------------------------------------------------------------

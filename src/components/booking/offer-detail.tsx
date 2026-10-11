@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/field";
 import { Gallery } from "@/components/ui/gallery";
 import { Card, EmptyState } from "@/components/ui/misc";
 import { Modal } from "@/components/ui/modal";
+import { ReportButton } from "@/components/reports/report-button";
 import { ShareButton } from "@/components/ui/share-button";
 import { PageSpinner } from "@/components/ui/spinner";
 import { api, errorMessage } from "@/lib/api";
@@ -286,6 +287,10 @@ function OfferView({ offer }: { offer: RentalOffer }) {
           <Card className="p-6">
             <PersonCard user={v?.owner} role="Propriétaire" />
           </Card>
+
+          <div className="flex justify-center">
+            <ReportButton targetType="OFFER" targetId={offer.id} ownerId={v?.ownerId ?? v?.owner?.id} />
+          </div>
         </div>
 
         <div className="hidden lg:block">

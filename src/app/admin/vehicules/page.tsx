@@ -25,7 +25,7 @@ export default function AdminVehiclesPage() {
       <ProPageHeader title="Véhicules" subtitle="Vérifiez les documents puis approuvez ou refusez chaque véhicule." />
       <Segmented
         layoutId="admin-vehicles"
-        className="w-full overflow-x-auto sm:w-auto"
+        className="w-full overflow-x-auto scrollbar-none sm:w-auto"
         value={filter}
         onChange={setFilter}
         options={[
