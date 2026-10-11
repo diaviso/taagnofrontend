@@ -404,7 +404,9 @@ export const adminActions = {
   cancelBooking: (id: string, reason?: string) => api.patch(`/admin/rental/bookings/${id}/cancel`, withReason(reason)),
   deleteReview: (id: string) => api.delete(`/admin/reviews/${id}`),
   setReportStatus: (id: string, status: ReportStatus, note?: string) => api.patch(`/admin/reports/${id}`, { status, ...(note?.trim() ? { note: note.trim() } : {}) }),
-  toggleUserActive: (id: string, reason?: string) => api.patch(`/admin/users/${id}/toggle-active`, withReason(reason)),
+  /** Suspendre (`false`) ou réactiver (`true`) : état explicite, jamais une bascule. */
+  setUserActive: (id: string, isActive: boolean, reason?: string) =>
+    api.patch(`/admin/users/${id}/toggle-active`, { isActive, ...withReason(reason) }),
   unlockUser: (id: string) => api.post(`/admin/users/${id}/unlock`),
   revokeSessions: (id: string) => api.post(`/admin/users/${id}/revoke-sessions`),
   notifyUser: (id: string, body: { audience: "VOYAGEUR" | "PRO"; title: string; body: string }) => api.post<{ sent: number }>(`/admin/users/${id}/notify`, body),

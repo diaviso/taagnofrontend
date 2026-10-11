@@ -312,7 +312,7 @@ export default function AdminUserPage() {
         placeholder="Ex. : plusieurs signalements d’arnaque"
         loading={busy === "active"}
         onConfirm={async (reason) => {
-          const ok = await run("active", () => adminActions.toggleUserActive(u.id, reason), { success: "Compte suspendu.", invalidate: ADMIN_INVALIDATE });
+          const ok = await run("active", () => adminActions.setUserActive(u.id, false, reason), { success: "Compte suspendu.", invalidate: ADMIN_INVALIDATE });
           if (ok !== undefined) setSuspendOpen(false);
         }}
       />
@@ -324,7 +324,7 @@ export default function AdminUserPage() {
         confirmLabel="Réactiver le compte"
         loading={busy === "active"}
         onConfirm={async () => {
-          const ok = await run("active", () => adminActions.toggleUserActive(u.id), { success: "Compte réactivé.", invalidate: ADMIN_INVALIDATE });
+          const ok = await run("active", () => adminActions.setUserActive(u.id, true), { success: "Compte réactivé.", invalidate: ADMIN_INVALIDATE });
           if (ok !== undefined) setReactivateOpen(false);
         }}
       />

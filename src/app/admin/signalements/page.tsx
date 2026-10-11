@@ -123,7 +123,7 @@ export default function AdminReportsPage() {
         onConfirm={async (reason) => {
           if (!suspend?.targetUserId) return;
           const targetUserId = suspend.targetUserId;
-          const ok = await run("suspend", () => adminActions.toggleUserActive(targetUserId, reason), { success: "Compte suspendu.", invalidate: ADMIN_INVALIDATE });
+          const ok = await run("suspend", () => adminActions.setUserActive(targetUserId, false, reason), { success: "Compte suspendu.", invalidate: ADMIN_INVALIDATE });
           if (ok !== undefined) setSuspend(null);
         }}
       />
