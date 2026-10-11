@@ -116,10 +116,13 @@ export const BOOKING_STATUS: Record<BookingStatus, { label: string; tone: Tone }
 
 export const isActiveBooking = (s: BookingStatus) => s === "PENDING" || s === "CONFIRMED";
 
-/** Qui a annulé une place de covoiturage (`SYSTEM` : demande expirée sans réponse). */
-export type TripCancelledBy = "PASSENGER" | "DRIVER" | "SYSTEM";
-/** Qui a annulé une location (`SYSTEM` : demande expirée sans réponse). */
-export type RentalCancelledBy = "RENTER" | "OWNER" | "SYSTEM";
+/** Qui a annulé une place de covoiturage (`SYSTEM` : demande expirée sans réponse, `ADMIN` : l'équipe Taagno). */
+export type TripCancelledBy = "PASSENGER" | "DRIVER" | "SYSTEM" | "ADMIN";
+/** Qui a annulé une location (`SYSTEM` : demande expirée sans réponse, `ADMIN` : l'équipe Taagno). */
+export type RentalCancelledBy = "RENTER" | "OWNER" | "SYSTEM" | "ADMIN";
+
+/** Libellé d'une annulation décidée par l'équipe Taagno. */
+export const ADMIN_CANCELLATION = "Annulée par l’équipe Taagno";
 
 // ---------------------------------------------------------------------------
 // Options
@@ -211,19 +214,19 @@ function capitalize(s: string) {
 }
 
 /** « Toyota Corolla » */
-export const vehicleTitle = (v?: Vehicle | null) => (v ? `${capitalize(v.brand)} ${v.model.trim()}`.trim() : "Véhicule");
+export const vehicleTitle = (v?: Pick<Vehicle, "brand" | "model"> | null) => (v ? `${capitalize(v.brand)} ${v.model.trim()}`.trim() : "Véhicule");
 
 /** « Toyota Corolla 2019 » */
-export const vehicleTitleYear = (v?: Vehicle | null) => (v?.year ? `${vehicleTitle(v)} ${v.year}` : vehicleTitle(v));
+export const vehicleTitleYear = (v?: Pick<Vehicle, "brand" | "model" | "year"> | null) => (v?.year ? `${vehicleTitle(v)} ${v.year}` : vehicleTitle(v));
 
 /** Photos, la principale en premier. */
-export const orderedPhotos = (v?: Vehicle | null) => {
+export const orderedPhotos = (v?: Pick<Vehicle, "photos"> | null) => {
   const photos = v?.photos ?? [];
   return [...photos.filter((p) => p.isMain), ...photos.filter((p) => !p.isMain)];
 };
 
 /** Photo principale (ou la première), `null` sans photo. */
-export const coverUrl = (v?: Vehicle | null) => orderedPhotos(v)[0]?.url ?? null;
+export const coverUrl = (v?: Pick<Vehicle, "photos"> | null) => orderedPhotos(v)[0]?.url ?? null;
 
 // ---------------------------------------------------------------------------
 // Covoiturage
@@ -276,6 +279,8 @@ export function tripCancellation(r: CarpoolReservation): CancellationNotice | nu
   if (r.status !== "CANCELLED") return null;
   const reason = cleanReason(r.cancelReason);
   switch (r.cancelledBy) {
+    case "ADMIN":
+      return { title: ADMIN_CANCELLATION, reason };
     case "DRIVER":
       return { title: "Le conducteur a annulé votre place", reason };
     case "SYSTEM":
@@ -343,6 +348,8 @@ export interface RentalOffer {
 export function rentalCancellation(b: RentalBooking): CancellationNotice | null {
   if (b.status !== "CANCELLED") return null;
   switch (b.cancelledBy) {
+    case "ADMIN":
+      return { title: ADMIN_CANCELLATION, reason: cleanReason(b.cancelReason) };
     case "OWNER":
       return { title: "Le propriétaire a annulé la location", reason: cleanReason(b.cancelReason) };
     case "SYSTEM":
@@ -389,6 +396,33 @@ export interface PublicProfile extends User {
 }
 
 // ---------------------------------------------------------------------------
+// Signalements, réglages publics
+// ---------------------------------------------------------------------------
+
+export type ReportTarget = "USER" | "TRIP" | "OFFER" | "REVIEW";
+
+export type ReportReason = "FRAUD" | "SAFETY" | "INAPPROPRIATE" | "NO_SHOW" | "FAKE_LISTING" | "SPAM" | "OTHER";
+
+/** Motifs proposés à la personne qui signale (mêmes libellés que le serveur). */
+export const REPORT_REASONS: { value: ReportReason; label: string; hint: string }[] = [
+  { value: "FRAUD", label: "Arnaque ou fraude", hint: "Demande d’argent suspecte, faux profil" },
+  { value: "SAFETY", label: "Comportement dangereux", hint: "Conduite à risque, menaces, harcèlement" },
+  { value: "INAPPROPRIATE", label: "Contenu ou propos inappropriés", hint: "Messages, photos ou description choquants" },
+  { value: "NO_SHOW", label: "Absent au rendez-vous", hint: "Personne ne s’est présenté ou n’a prévenu" },
+  { value: "FAKE_LISTING", label: "Annonce trompeuse", hint: "Prix, véhicule ou informations erronés" },
+  { value: "SPAM", label: "Publicité ou spam", hint: "Démarchage, annonces répétées" },
+  { value: "OTHER", label: "Autre", hint: "Un autre problème, expliquez-le ci-dessous" },
+];
+
+export const reportReasonLabel = (reason: string) => REPORT_REASONS.find((r) => r.value === reason)?.label ?? reason;
+
+/** Coordonnées du support et bandeau d'annonce (`GET /settings/public`). */
+export interface PublicSettings {
+  support: { phone: string | null; whatsapp: string | null; email: string | null };
+  announcement: { text: string } | null;
+}
+
+// ---------------------------------------------------------------------------
 // Notifications, alertes
 // ---------------------------------------------------------------------------
 
@@ -403,7 +437,8 @@ export type NotificationKind =
   | "review_booking"
   | "vehicle"
   | "review"
-  | "trip_alert";
+  | "trip_alert"
+  | "announcement";
 
 export interface AppNotification {
   id: string;

@@ -1,7 +1,7 @@
-import { ArrowRight, BadgeCheck, HandCoins, Lock, Mail } from "lucide-react";
+import { ArrowRight, BadgeCheck, HandCoins, Lock } from "lucide-react";
 import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
-import { SUPPORT_EMAIL } from "@/components/info/legal";
+import { SupportActions } from "@/components/info/support-actions";
 import { Reveal } from "@/components/ui/reveal";
 import { POPULAR_ROUTES } from "@/lib/cities";
 import { BackToTop } from "./back-to-top";
@@ -98,12 +98,7 @@ export function SiteFooter({ showCta = true }: { showCta?: boolean }) {
                   );
                 })}
               </ul>
-              <a
-                href={`mailto:${SUPPORT_EMAIL}`}
-                className="mt-6 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-[13.5px] font-bold text-white transition hover:bg-white/20"
-              >
-                <Mail className="h-4 w-4" /> {SUPPORT_EMAIL}
-              </a>
+              <SupportActions variant="footer" />
             </div>
             {COLUMNS.map((col, i) => (
               <Reveal key={col.title} delay={0.05 * i}>

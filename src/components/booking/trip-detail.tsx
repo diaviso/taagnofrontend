@@ -14,6 +14,7 @@ import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Card, Counter, EmptyState } from "@/components/ui/misc";
 import { Modal } from "@/components/ui/modal";
+import { ReportButton } from "@/components/reports/report-button";
 import { ShareButton } from "@/components/ui/share-button";
 import { PageSpinner } from "@/components/ui/spinner";
 import { api, errorMessage } from "@/lib/api";
@@ -197,6 +198,10 @@ function TripView({ trip }: { trip: CarpoolTrip }) {
             <p>
               <strong className="text-ink">Paiement au conducteur, le jour du départ</strong> (espèces, Wave ou Orange Money). Taagno ne prend aucune commission.
             </p>
+          </div>
+
+          <div className="flex justify-center">
+            <ReportButton targetType="TRIP" targetId={trip.id} ownerId={trip.driverId ?? trip.driver?.id} />
           </div>
         </div>
 

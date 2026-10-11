@@ -15,7 +15,7 @@ import { api } from "@/lib/api";
 import { day, fcfa, parseDay, plural, range, rentalDays, startOfDay, time } from "@/lib/format";
 import { isStaleRentalRequest, isStaleTripRequest, type RentalRequest, type TripRequest } from "@/lib/pro";
 import { useAction, useGivenReviews } from "@/lib/queries";
-import { BOOKING_STATUS, isPastTrip, shortName, userRating, vehicleTitle } from "@/lib/types";
+import { ADMIN_CANCELLATION, BOOKING_STATUS, isPastTrip, shortName, userRating, vehicleTitle } from "@/lib/types";
 import { ReasonModal } from "./reason-modal";
 
 const INVALIDATE = [["trips"], ["offers"], ["unread"], ["notifications"]];
@@ -45,7 +45,9 @@ export function TripRequestCard({ request, showTrip = true, index = 0 }: { reque
           ? "Le passager a annulé sa place"
           : r.cancelledBy === "SYSTEM"
             ? "Demande expirée sans réponse"
-            : null;
+            : r.cancelledBy === "ADMIN"
+              ? ADMIN_CANCELLATION
+              : null;
 
   return (
     <motion.div
@@ -186,7 +188,9 @@ export function RentalRequestCard({ request, showOffer = true, index = 0 }: { re
           ? "Le locataire a annulé sa demande"
           : b.cancelledBy === "SYSTEM"
             ? "Demande expirée sans réponse"
-            : null;
+            : b.cancelledBy === "ADMIN"
+              ? ADMIN_CANCELLATION
+              : null;
   const canReview = b.status === "COMPLETED" && !!given.data && !given.data.rentalBookingIds.includes(b.id);
   const v = offer.vehicle;
 

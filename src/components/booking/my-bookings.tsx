@@ -220,7 +220,7 @@ function RentalBookingCard({ b, index, canReview }: { b: RentalBooking; index: n
               </Badge>
             </div>
           )}
-          {notice && <p className={cn("mt-1.5 text-[12.5px] font-semibold", b.cancelledBy === "OWNER" ? "text-danger" : "text-muted")}>{notice.title}</p>}
+          {notice && <p className={cn("mt-1.5 text-[12.5px] font-semibold", b.cancelledBy === "OWNER" || b.cancelledBy === "ADMIN" ? "text-danger" : "text-muted")}>{notice.title}</p>}
           <div className="mt-2 flex items-center justify-between gap-2">
             <p className="text-[14px] font-extrabold text-ink">{fcfa(b.totalPrice)}</p>
             {canReview && (

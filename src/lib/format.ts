@@ -142,6 +142,9 @@ export function relative(d: Date | string) {
   return dateShort(d);
 }
 
+/** `true` si l'instant est dans le futur. */
+export const isFuture = (d: Date | string) => toDate(d).getTime() > Date.now();
+
 /** « dans 3 h », « dans 2 j » : délai avant un départ. */
 export function countdown(d: Date | string) {
   const diff = toDate(d).getTime() - Date.now();
